@@ -14,6 +14,7 @@ ShellRoot {
     property bool enableOverview: true
     
     Component.onCompleted: {
+        Cliphist.refresh()
         MaterialThemeLoader.reapplyTheme()
     }
     

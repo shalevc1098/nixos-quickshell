@@ -51,7 +51,7 @@ Scope {
             // Layer configuration
             WlrLayershell.namespace: "quickshell:overview"
             WlrLayershell.layer: WlrLayer.Overlay
-            WlrLayershell.keyboardFocus: GlobalStates.overviewOpen ? WlrKeyboardFocus.OnDemand : WlrKeyboardFocus.None
+            WlrLayershell.keyboardFocus: GlobalStates.overviewOpen && monitorIsFocused ? WlrKeyboardFocus.Exclusive : WlrKeyboardFocus.None
             
             color: "transparent"
             
@@ -137,7 +137,6 @@ Scope {
                 target: GlobalStates
                 function onOverviewOpenChanged() {
                     if (GlobalStates.overviewOpen) {
-                        // focusGrab.active = root.monitorIsFocused
                         searchWidget.focusSearch()
                     } else {
                         searchWidget.clearSearch()

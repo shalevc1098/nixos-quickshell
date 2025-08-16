@@ -7,9 +7,10 @@ import QtQuick.Layouts
 import QtQuick.Effects
 import Quickshell
 import Quickshell.Io
+import Quickshell.Widgets
 import "."
 
-Item {
+FocusScope {
     id: root
     
     implicitWidth: 620  // Max width to accommodate expanded search
@@ -19,10 +20,11 @@ Item {
     property alias searchingText: searchField.text
     property bool showResults: searchingText !== ""
     property string mathResult: ""
+    property var searchResults: []
     signal searchSubmitted()
     
     function focusSearch() {
-        searchField.focus = true
+        searchField.forceActiveFocus()
         // Enable animation after initial focus
         expandAnimationTimer.start()
     }
@@ -90,6 +92,7 @@ Item {
             // Search input
             TextField {
                 id: searchField
+                focus: true
                 Layout.rightMargin: 15
                 Layout.fillHeight: true
                 implicitWidth: searchingText === "" ? 260 : 450
@@ -121,11 +124,17 @@ Item {
             }
             
             Keys.onReturnPressed: {
-                root.searchSubmitted()
+                if (appResults.count > 0 && searchModel.get(0)) {
+                    const firstItem = searchModel.get(0)
+                    root.launchSearchResult(firstItem)
+                }
             }
             
             Keys.onEnterPressed: {
-                root.searchSubmitted()
+                if (appResults.count > 0 && searchModel.get(0)) {
+                    const firstItem = searchModel.get(0)
+                    root.launchSearchResult(firstItem)
+                }
             }
             
             Keys.onEscapePressed: {
@@ -183,15 +192,16 @@ Item {
                     }
                 }
                 
-                // Model with dummy search results
-                model: ListModel {
+                // Model with search results
+                model: ScriptModel {
                     id: searchModel
+                    values: root.searchResults
                 }
                 
                 delegate: SearchItem {
-                    required property var model
+                    required property var modelData
                     width: appResults.width
-                    entry: model
+                    entry: modelData
                     query: root.searchingText
                 }
             }
@@ -255,28 +265,92 @@ Item {
         // }  // Rectangle (resultsContainer)
     }  // ColumnLayout
     
+    // Function to handle launching search results
+    function launchSearchResult(item) {
+        if (!item) return
+        
+        if (item.execute && typeof item.execute === 'function') {
+            // Item has an execute function (like DesktopEntry)
+            item.execute()
+            GlobalStates.overviewOpen = false
+        } else if (item.commandText) {
+            // Run command
+            Quickshell.execDetached(["bash", "-c", item.commandText])
+            GlobalStates.overviewOpen = false
+        } else if (item.mathResultText && item.mathResultText !== "Calculating...") {
+            // Copy math result
+            Quickshell.clipboardText = item.mathResultText
+            GlobalStates.overviewOpen = false
+        } else if (item.webSearchQuery) {
+            // Open web search
+            Qt.openUrlExternally("https://www.google.com/search?q=" + encodeURIComponent(item.webSearchQuery))
+            GlobalStates.overviewOpen = false
+        }
+    }
+    
     // Timer for delayed search operations
     Timer {
         id: searchTimer
-        interval: 300
+        interval: Config.search.nonAppResultDelay
         onTriggered: performSearch()
     }
     
-    // Math calculation process
+    // Check if a command exists
     Process {
-        id: mathProcess
-        property list<string> baseCommand: ["qalc", "-t"]
-        function calculateExpression(expression) {
-            mathProcess.running = false
-            mathProcess.command = baseCommand.concat(expression)
-            mathProcess.running = true
-        }
-        stdout: StdioCollector {
-            onDataChanged: {
-                root.mathResult = String(data).trim()
+        id: commandChecker
+        property string fullCommand: ""
+        property string checkedWord: ""
+        
+        onExited: (exitCode, exitStatus) => {
+            if (exitCode === 0 && commandChecker.fullCommand === root.searchingText) {
+                // Command is valid, add it to results
+                const commandResultObject = {
+                    name: commandChecker.fullCommand,
+                    clickActionName: "Run",
+                    type: "Run command",
+                    iconText: "󰅬",
+                    fontType: "monospace",
+                    execute: () => {
+                        Quickshell.execDetached(["bash", "-c", commandChecker.fullCommand])
+                        GlobalStates.overviewOpen = false
+                    }
+                }
+                
+                // Add to existing results after apps, before web search
+                let newResults = root.searchResults.slice()
+                // Insert before web search (which is always last)
+                newResults.splice(newResults.length - 1, 0, commandResultObject)
+                root.searchResults = newResults
             }
         }
+        
+        function checkCommand(firstWord) {
+            if (!firstWord || firstWord.includes('/') || firstWord.includes('\\')) {
+                return
+            }
+            commandChecker.fullCommand = root.searchingText
+            commandChecker.checkedWord = firstWord
+            commandChecker.command = ["bash", "-c", `command -v "${firstWord}"`]
+            commandChecker.running = false
+            commandChecker.running = true
+        }
     }
+    
+    // Math calculation process (disabled for now)
+    // Process {
+    //     id: mathProcess
+    //     property list<string> baseCommand: ["qalc", "-t"]
+    //     function calculateExpression(expression) {
+    //         mathProcess.running = false
+    //         mathProcess.command = baseCommand.concat(expression)
+    //         mathProcess.running = true
+    //     }
+    //     stdout: StdioCollector {
+    //         onDataChanged: {
+    //             root.mathResult = String(data).trim()
+    //         }
+    //     }
+    // }
     
     // Watch for search text changes
     Connections {
@@ -287,120 +361,73 @@ Item {
     }
     
     function performSearch() {
-        searchModel.clear()
+        if (searchingText === "") {
+            root.searchResults = []
+            return
+        }
         
-        if (searchingText === "") return
-        
-        // Dummy app results
-        searchModel.append({
-            name: "Firefox",
-            clickActionName: "Launch",
-            type: "App",
-            icon: "firefox",
-            iconText: "",
-            fontType: "main",
-            execute: function() {
-                Quickshell.execDetached(["firefox"])
-                GlobalStates.overviewOpen = false
-            }
-        })
-        
-        searchModel.append({
-            name: "Visual Studio Code",
-            clickActionName: "Launch",
-            type: "App",
-            icon: "code",
-            iconText: "",
-            fontType: "main",
-            execute: function() {
-                Quickshell.execDetached(["code"])
-                GlobalStates.overviewOpen = false
-            }
-        })
-        
-        searchModel.append({
-            name: "Terminal",
-            clickActionName: "Launch",
-            type: "App",
-            icon: "utilities-terminal",
-            iconText: "",
-            fontType: "main",
-            execute: function() {
-                Quickshell.execDetached(["kitty"])
-                GlobalStates.overviewOpen = false
-            }
-        })
-        
-        // Add command result
-        searchModel.append({
-            name: searchingText,
-            clickActionName: "Run",
-            type: "Run command",
-            iconText: "",
-            fontType: "monospace",
-            execute: function() {
-                Quickshell.execDetached(["bash", "-c", searchingText])
-                GlobalStates.overviewOpen = false
-            }
-        })
-        
-        // Start math calculation
-        const startsWithNumber = /^\d/.test(searchingText)
-        if (startsWithNumber) {
-            mathProcess.calculateExpression(searchingText)
-            // Add math result
-            searchModel.append({
-                name: mathResult || "Calculating...",
-                clickActionName: "Copy",
-                type: "Math result",
-                iconText: "󰃬",
-                fontType: "monospace",
-                execute: function() {
-                    if (mathResult) {
-                        Quickshell.clipboardText = mathResult
-                        GlobalStates.overviewOpen = false
-                    }
+        // Check for clipboard search prefix
+        if (root.searchingText.startsWith(Config.search.prefix.clipboard)) {
+            // Clipboard search
+            const searchString = root.searchingText.slice(Config.search.prefix.clipboard.length)
+            root.searchResults = Cliphist.search(searchString).map(entry => {
+                return {
+                    cliphistRawString: entry,
+                    name: entry.replace(/^\s*\S+\s+/, ""),
+                    clickActionName: "",
+                    type: `#${entry.match(/^\s*(\S+)/)?.[1] || ""}`,
+                    execute: () => {
+                        Cliphist.copy(entry)
+                    },
+                    actions: [
+                        {
+                            name: "Delete",
+                            icon: "delete",
+                            execute: () => {
+                                Cliphist.deleteEntry(entry)
+                            }
+                        }
+                    ]
                 }
-            })
+            }).filter(Boolean)
+            return
+        }
+        
+        let results = []
+        
+        // Search for real applications
+        const appResults = AppSearch.search(searchingText)
+        results = results.concat(appResults.map(entry => {
+            entry.clickActionName = "Launch";
+            entry.type = "App";
+            return entry;
+        }))
+        
+        // Check if it's a valid command
+        const firstWord = searchingText.split(' ')[0]
+        if (firstWord && firstWord.length > 0) {
+            // Start checking if command exists
+            commandChecker.checkCommand(firstWord)
         }
         
         // Add web search
-        searchModel.append({
+        results.push({
             name: searchingText,
             clickActionName: "Search",
             type: "Search the web",
             iconText: "󰍉",
             fontType: "main",
-            execute: function() {
-                Qt.openUrlExternally("https://www.google.com/search?q=" + encodeURIComponent(searchingText))
+            execute: () => {
+                let url = Config.search.engineBaseUrl + encodeURIComponent(searchingText)
+                for (let site of Config.search.excludedSites) {
+                    url += encodeURIComponent(` -site:${site}`)
+                }
+                Qt.openUrlExternally(url)
                 GlobalStates.overviewOpen = false
             }
         })
         
-        // Add some action examples
-        searchModel.append({
-            name: "Dark Mode",
-            clickActionName: "Run",
-            type: "Action",
-            iconText: "󰌑",
-            fontType: "main",
-            execute: function() {
-                // Placeholder for dark mode toggle
-                GlobalStates.overviewOpen = false
-            }
-        })
-        
-        searchModel.append({
-            name: "Settings",
-            clickActionName: "Open",
-            type: "System",
-            icon: "preferences-system",
-            iconText: "",
-            fontType: "main",
-            execute: function() {
-                Quickshell.execDetached(["systemsettings5"])
-                GlobalStates.overviewOpen = false
-            }
-        })
+        // Set the search results
+        root.searchResults = results
     }
 }  // Item (root)

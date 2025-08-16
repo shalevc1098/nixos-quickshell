@@ -14,11 +14,14 @@ Rectangle {
     property string query
     property bool entryShown: entry?.shown ?? true
     property string itemType: entry?.type ?? "App"
-    property string itemName: entry?.name
+    property string itemName: entry?.name ?? ""
     property string itemIcon: entry?.icon ?? ""
     property var itemExecute: entry?.execute
+    property string commandText: entry?.commandText ?? ""
+    property string mathResultText: entry?.mathResultText ?? ""
+    property string webSearchQuery: entry?.webSearchQuery ?? ""
     property string fontType: entry?.fontType ?? "main"
-    property string itemClickActionName: entry?.clickActionName
+    property string itemClickActionName: entry?.clickActionName ?? ""
     property string bigText: entry?.bigText ?? ""
     property string iconText: entry?.iconText ?? ""
     property string cliphistRawString: entry?.cliphistRawString ?? ""
@@ -106,8 +109,10 @@ Rectangle {
     }
 
     onClicked: {
-        root.itemExecute()
-        GlobalStates.overviewOpen = false
+        if (root.itemExecute) {
+            root.itemExecute()
+            GlobalStates.overviewOpen = false
+        }
     }
     Keys.onPressed: (event) => {
         if (event.key === Qt.Key_Return || event.key === Qt.Key_Enter) {
@@ -255,7 +260,11 @@ Rectangle {
         RowLayout {
             spacing: 4
             Repeater {
-                model: (root.entry.actions ?? []).slice(0, 4)
+                model: {
+                    const actions = root.entry?.actions
+                    if (!actions || !Array.isArray(actions)) return []
+                    return actions.slice(0, 4)
+                }
                 delegate: Rectangle {
                     id: actionButton
                     required property var modelData

@@ -117,40 +117,6 @@ Item {
             }
           }
           
-          // Overview button - workspace switcher
-          Bubble {
-            id: overviewBubble
-            horizontalPadding: 8
-            onClicked: {
-              GlobalStates.toggleOverview()
-            }
-            
-            content: Component {
-              Item {
-                implicitWidth: overviewIcon.width
-                implicitHeight: overviewIcon.height
-                
-                Text {
-                  id: overviewIcon
-                  text: "󰕰"  // Grid icon for overview
-                  font.family: "JetBrainsMono Nerd Font Propo"
-                  font.pixelSize: 16
-                  color: GlobalStates.overviewOpen ? Appearance.m3colors.primary : 
-                        Appearance.m3colors.on_surface_variant
-                  
-                  Behavior on color {
-                    ColorAnimation { duration: 150 }
-                  }
-                }
-                
-                StyledTooltip {
-                  visible: parent.parent && parent.parent.isHovered
-                  text: "Overview (Super+Tab)"
-                  delay: 500
-                }
-              }
-            }
-          }
           
           // Bell icon bubble (shows notification history) - moved after workspaces
           Bubble {
@@ -162,11 +128,13 @@ Item {
                 
                 Text {
                   id: bellText
-                  text: NotificationService.notifications.length > 0 ? "󰂚" : "󰂜"  // Bell icon changes based on notifications
+                  text: NotificationService.muted ? "󰂛" : (NotificationService.notifications.length > 0 ? "󰂚" : "󰂜")  // Bell icon changes based on muted state and notifications
                   font.family: "SF Pro Display, JetBrainsMono Nerd Font Propo"
                   font.pixelSize: 14
-                  // Change color on hover when parent is clickable
-                  color: (parent.parent && parent.parent.isHovered) ? Appearance.m3colors.primary : Appearance.m3colors.on_surface_variant
+                  // Change color based on muted state and hover
+                  color: NotificationService.muted ? Appearance.m3colors.on_surface : 
+                         (parent.parent && parent.parent.isHovered) ? Appearance.m3colors.primary : 
+                         Appearance.m3colors.on_surface_variant
                   
                   Behavior on color {
                       ColorAnimation { duration: 150 }
@@ -187,8 +155,14 @@ Item {
                 }
               }
             }
-            onClicked: function() {
-              notificationHistory.showing = !notificationHistory.showing
+            onClicked: function(mouse) {
+              if (mouse && mouse.button === Qt.RightButton) {
+                // Right-click: toggle mute
+                NotificationService.toggleMute()
+              } else {
+                // Left-click: toggle notification history
+                notificationHistory.showing = !notificationHistory.showing
+              }
             }
           }
         }

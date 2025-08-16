@@ -549,7 +549,7 @@ Item {
                                 
                                 source: {
                                     if (!windowData) return ""
-                                    return Quickshell.iconPath(windowData.class || "", "image-missing")
+                                    return Quickshell.iconPath(AppSearch.guessIcon(windowData.class || ""), "image-missing")
                                 }
                                 
                                 sourceSize: Qt.size(parent.iconSize, parent.iconSize)

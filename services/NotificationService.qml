@@ -10,12 +10,18 @@ Singleton {
     
     property var notifications: []
     property int defaultTimeout: 5000
+    property bool muted: false
     
     signal notificationAdded(var notification)
     signal notificationRemoved(int id)
     
     Component.onCompleted: {
         console.log("NotificationService initialized")
+    }
+    
+    function toggleMute() {
+        muted = !muted
+        console.log(`Notifications ${muted ? 'muted' : 'unmuted'}`)
     }
     
     function addNotification(notification) {
@@ -138,6 +144,12 @@ Singleton {
         
         onNotification: (notification) => {
             console.log(`NotificationServer received: app="${notification.appName}" title="${notification.summary}" id=${notification.id} tracked=${notification.tracked}`)
+            
+            // Skip processing if notifications are muted
+            if (root.muted) {
+                console.log("Notification ignored (muted)")
+                return
+            }
             
             // Only track notifications with actions (needed for invoke to work)
             const hasActions = notification.actions && Object.keys(notification.actions).length > 0

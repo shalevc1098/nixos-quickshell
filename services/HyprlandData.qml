@@ -6,107 +6,87 @@ import Quickshell
 import Quickshell.Hyprland
 import Quickshell.Io
 
+/**
+ * Provides access to real-time Hyprland data using direct hyprctl commands.
+ * Based on end4's exact approach for live position updates.
+ */
 Singleton {
     id: root
     
-    property var monitors: []
     property var windowList: []
-    property var windowByAddress: ({})
     property var addresses: []
-    property var layers: []
-    
+    property var windowByAddress: ({})
+    property var monitors: []
     property var workspaceBiggestWindow: ({})
     
-    Timer {
-        interval: 100
-        running: true
-        repeat: true
-        onTriggered: root.update()
-    }
-    
-    function update() {
-        updateMonitors()
-        updateWindows()
-        updateLayers()
-        calculateBiggestWindows()
+    function updateWindowList() {
+        getClients.running = true
     }
     
     function updateMonitors() {
-        const newMonitors = []
-        if (!Hyprland.monitors) {
-            root.monitors = newMonitors
-            return
-        }
-        for (const monitor of Hyprland.monitors.values) {
-            if (!monitor) continue
-            newMonitors.push({
-                id: monitor.id,
-                name: monitor.name,
-                x: monitor.x,
-                y: monitor.y,
-                width: monitor.width,
-                height: monitor.height,
-                scale: monitor.scale,
-                transform: monitor.transform,
-                reserved: [0, 0, 0, 0], // top, right, bottom, left
-                activeWorkspace: monitor.activeWorkspace?.id || 1
-            })
-        }
-        root.monitors = newMonitors
+        getMonitors.running = true
     }
     
-    function updateWindows() {
-        const newWindowList = []
-        const newWindowByAddress = {}
-        const newAddresses = []
+    function updateAll() {
+        updateWindowList()
+        updateMonitors()
+    }
+    
+    function biggestWindowForWorkspace(workspaceId) {
+        const windowsInThisWorkspace = root.windowList.filter(w => w.workspace.id == workspaceId)
+        return windowsInThisWorkspace.reduce((maxWin, win) => {
+            const maxArea = (maxWin?.size?.[0] ?? 0) * (maxWin?.size?.[1] ?? 0)
+            const winArea = (win?.size?.[0] ?? 0) * (win?.size?.[1] ?? 0)
+            return winArea > maxArea ? win : maxWin
+        }, null)
+    }
+    
+    Component.onCompleted: {
+        updateAll()
+    }
+    
+    // End4's key insight: Listen to ALL Hyprland events for real-time updates
+    Connections {
+        target: Hyprland
         
-        
-        if (!Hyprland.toplevels) {
-            root.windowList = newWindowList
-            root.windowByAddress = newWindowByAddress
-            root.addresses = newAddresses
-            return
+        function onRawEvent(event) {
+            // console.log("Hyprland raw event:", event.name)
+            updateAll()
         }
-        
-        for (const toplevel of Hyprland.toplevels.values) {
-            if (!toplevel) continue
-            
-            
-            // Get data from lastIpcObject which contains the actual client info
-            const ipcData = toplevel.lastIpcObject || {}
-            
-            const windowData = {
-                address: toplevel.address,
-                at: [ipcData.at?.[0] || 0, ipcData.at?.[1] || 0],
-                size: [ipcData.size?.[0] || 0, ipcData.size?.[1] || 0],
-                workspace: {
-                    id: toplevel.workspace?.id || ipcData.workspace?.id || 1,
-                    name: toplevel.workspace?.name || ipcData.workspace?.name || "1"
-                },
-                floating: ipcData.floating || false,
-                monitor: toplevel.monitor?.id || ipcData.monitor || 0,
-                class: ipcData.class || "",
-                title: toplevel.title || ipcData.title || "",
-                pid: ipcData.pid || 0,
-                xwayland: ipcData.xwayland || false,
-                pinned: ipcData.pinned || false,
-                fullscreen: ipcData.fullscreen || false,
-                fullscreenClient: ipcData.fullscreenClient || false
+    }
+    
+    // Direct hyprctl command for live window data - End4's approach
+    Process {
+        id: getClients
+        command: ["hyprctl", "clients", "-j"]
+        stdout: StdioCollector {
+            id: clientsCollector
+            onStreamFinished: {
+                root.windowList = JSON.parse(clientsCollector.text)
+                let tempWinByAddress = {}
+                for (var i = 0; i < root.windowList.length; ++i) {
+                    var win = root.windowList[i]
+                    tempWinByAddress[win.address] = win
+                }
+                root.windowByAddress = tempWinByAddress
+                root.addresses = root.windowList.map(win => win.address)
+                
+                // Calculate biggest windows for workspaces
+                calculateBiggestWindows()
             }
-            
-            newWindowList.push(windowData)
-            newWindowByAddress[toplevel.address] = windowData
-            newAddresses.push(toplevel.address)
         }
-        
-        root.windowList = newWindowList
-        root.windowByAddress = newWindowByAddress
-        root.addresses = newAddresses
     }
     
-    function updateLayers() {
-        // Placeholder for layer data if needed
-        root.layers = []
+    // Monitor data using hyprctl
+    Process {
+        id: getMonitors
+        command: ["hyprctl", "monitors", "-j"]
+        stdout: StdioCollector {
+            id: monitorsCollector
+            onStreamFinished: {
+                root.monitors = JSON.parse(monitorsCollector.text)
+            }
+        }
     }
     
     function calculateBiggestWindows() {
@@ -125,26 +105,5 @@ Singleton {
         }
         
         root.workspaceBiggestWindow = biggestByWorkspace
-    }
-    
-    // Connect to Hyprland events
-    Connections {
-        target: Hyprland
-        
-        function onClientsChanged() {
-            root.update()
-        }
-        
-        function onMonitorsChanged() {
-            root.update()
-        }
-        
-        function onWorkspacesChanged() {
-            root.update()
-        }
-    }
-    
-    Component.onCompleted: {
-        root.update()
     }
 }

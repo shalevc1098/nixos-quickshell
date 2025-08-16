@@ -198,6 +198,7 @@ Item {
                             }
                             property bool hasWindows: workspaceClients.length > 0
                             
+                            
                             // Update when window data changes
                             Connections {
                                 target: root
@@ -308,22 +309,94 @@ Item {
                     property real xOffset: (root.workspaceImplicitWidth + workspaceSpacing) * workspaceColIndex
                     property real yOffset: (root.workspaceImplicitHeight + workspaceSpacing) * workspaceRowIndex
                     
-                    // End4's exact positioning approach - with property bindings that auto-update
-                    property real initX: windowData && monitorData ? 
-                        Math.max((windowData.at[0] - (monitorData.x || 0) - (monitorData.reserved?.[0] || 0)) * root.scale, 0) + xOffset : xOffset
-                    property real initY: windowData && monitorData ? 
-                        Math.max((windowData.at[1] - (monitorData.y || 0) - (monitorData.reserved?.[1] || 0)) * root.scale, 0) + yOffset : yOffset
+                    // Smart cross-monitor positioning with proportional scaling
+                    property real initX: {
+                        if (!windowData || !monitorData) return xOffset
+                        
+                        const windowMonitor = monitorData
+                        const overviewMonitor = root.monitorData
+                        
+                        if (!overviewMonitor) return xOffset
+                        
+                        // Calculate relative position as a percentage of monitor width
+                        const windowMonitorWorkspaceWidth = windowMonitor.width - (windowMonitor.reserved?.[0] || 0) - (windowMonitor.reserved?.[2] || 0)
+                        const relativeX = (windowData.at[0] - (windowMonitor.x || 0) - (windowMonitor.reserved?.[0] || 0))
+                        const relativeXPercent = relativeX / windowMonitorWorkspaceWidth
+                        
+                        // For cross-monitor, scale proportionally to fit within workspace
+                        if (windowMonitor.id !== overviewMonitor.id) {
+                            // Scale proportionally to fit within this overview's workspace
+                            const scaledX = relativeXPercent * root.workspaceImplicitWidth
+                            return Math.max(Math.min(scaledX, root.workspaceImplicitWidth - 20), 0) + xOffset
+                        }
+                        
+                        // Same monitor: use normal positioning
+                        return Math.max(relativeX * root.scale, 0) + xOffset
+                    }
+                    property real initY: {
+                        if (!windowData || !monitorData) return yOffset
+                        
+                        const windowMonitor = monitorData
+                        const overviewMonitor = root.monitorData
+                        
+                        if (!overviewMonitor) return yOffset
+                        
+                        // Calculate relative position as a percentage of monitor height
+                        const windowMonitorWorkspaceHeight = windowMonitor.height - (windowMonitor.reserved?.[1] || 0) - (windowMonitor.reserved?.[3] || 0)
+                        const relativeY = (windowData.at[1] - (windowMonitor.y || 0) - (windowMonitor.reserved?.[1] || 0))
+                        const relativeYPercent = relativeY / windowMonitorWorkspaceHeight
+                        
+                        // For cross-monitor, scale proportionally to fit within workspace
+                        if (windowMonitor.id !== overviewMonitor.id) {
+                            // Scale proportionally to fit within this overview's workspace
+                            const scaledY = relativeYPercent * root.workspaceImplicitHeight
+                            return Math.max(Math.min(scaledY, root.workspaceImplicitHeight - 20), 0) + yOffset
+                        }
+                        
+                        // Same monitor: use normal positioning
+                        return Math.max(relativeY * root.scale, 0) + yOffset
+                    }
                     
                     
                     property bool hovered: false
                     property bool pressed: false
                     property bool atInitPosition: (initX == x && initY == y)
                     
-                    // End4's exact property bindings for automatic updates
+                    // End4's exact property bindings for automatic updates with cross-monitor scaling
                     x: initX
                     y: initY
-                    width: windowData ? windowData.size[0] * root.scale : 60
-                    height: windowData ? windowData.size[1] * root.scale : 40
+                    width: {
+                        if (!windowData) return 60
+                        
+                        let baseWidth = windowData.size[0]
+                        
+                        // Scale size proportionally for cross-monitor
+                        if (monitorData && root.monitorData && monitorData.id !== root.monitorData.id) {
+                            // Use proportional scaling instead of resolution ratio
+                            const windowMonitorWorkspaceWidth = monitorData.width - (monitorData.reserved?.[0] || 0) - (monitorData.reserved?.[2] || 0)
+                            const widthPercent = baseWidth / windowMonitorWorkspaceWidth
+                            const newWidth = widthPercent * root.workspaceImplicitWidth
+                            return newWidth // Don't scale again - already scaled to workspace size
+                        }
+                        
+                        return baseWidth * root.scale
+                    }
+                    height: {
+                        if (!windowData) return 40
+                        
+                        let baseHeight = windowData.size[1]
+                        
+                        // Scale size proportionally for cross-monitor
+                        if (monitorData && root.monitorData && monitorData.id !== root.monitorData.id) {
+                            // Use proportional scaling instead of resolution ratio
+                            const windowMonitorWorkspaceHeight = monitorData.height - (monitorData.reserved?.[1] || 0) - (monitorData.reserved?.[3] || 0)
+                            const heightPercent = baseHeight / windowMonitorWorkspaceHeight
+                            const newHeight = heightPercent * root.workspaceImplicitHeight
+                            return newHeight // Don't scale again - already scaled to workspace size
+                        }
+                        
+                        return baseHeight * root.scale
+                    }
                     opacity: windowData && monitorData ? (root.monitor?.id === windowData.monitor ? 1.0 : 0.4) : 0.4
                     
                     z: atInitPosition ? root.windowZ : root.windowDraggingZ

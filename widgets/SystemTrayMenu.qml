@@ -3,12 +3,13 @@ import QtQuick
 import QtQuick.Controls
 import Qt5Compat.GraphicalEffects
 import Quickshell
+import Quickshell.DBusMenu
 
 PanelWindow {
     id: root
     
     property var trayItem: null
-    property var menuItems: []
+    property var menuOpener: null  // Pass the QsMenuOpener instead of extracted items
     property var sourceRect: ({ x: 0, y: 0, width: 0, height: 0 })
     
     visible: true
@@ -109,20 +110,42 @@ PanelWindow {
                 spacing: 2
             
             Repeater {
-                model: root.menuItems
+                model: root.menuOpener ? root.menuOpener.children : []
                 
                 onItemAdded: (index, item) => {
                     console.log("Menu item added at index:", index)
                 }
                 
-                delegate: Rectangle {
-                    width: menuColumn.width
-                    height: menuItem.type === "separator" ? 9 : 32
-                    color: menuItem.type === "separator" ? "transparent" : 
-                           (mouseArea.containsMouse ? Appearance.m3colors.surface_container_highest : "transparent")
-                    radius: 4
+                delegate: Loader {
+                    required property var modelData  // DBusMenuItem from the model
+                    required property int index
                     
-                    property var menuItem: modelData
+                    // Filter out empty items and consecutive separators
+                    active: {
+                        // Skip empty non-separator items
+                        if (!modelData.isSeparator && (!modelData.text || modelData.text.trim() === "")) {
+                            return false
+                        }
+                        
+                        // Check for consecutive separators
+                        if (modelData.isSeparator && index > 0) {
+                            // Access the values array to check previous item
+                            let prevItem = root.menuOpener.children.values[index - 1]
+                            if (prevItem && prevItem.isSeparator) {
+                                console.log("Skipping consecutive separator at index", index)
+                                return false
+                            }
+                        }
+                        
+                        return true
+                    }
+                    
+                    sourceComponent: Rectangle {
+                        width: menuColumn.width
+                        height: modelData.isSeparator ? 9 : 32
+                        color: modelData.isSeparator ? "transparent" : 
+                               (mouseArea.containsMouse ? Appearance.m3colors.surface_container_highest : "transparent")
+                        radius: 4
                     
                     // Regular menu item content
                     Row {
@@ -130,20 +153,20 @@ PanelWindow {
                         anchors.leftMargin: 8
                         anchors.verticalCenter: parent.verticalCenter
                         spacing: 8
-                        visible: menuItem.type !== "separator"
+                        visible: !modelData.isSeparator
                         
                         // Icon (if available) - supports both font icons and image icons
                         Loader {
                             anchors.verticalCenter: parent.verticalCenter
                             width: 16
                             height: 16
-                            active: menuItem.icon && menuItem.icon !== ""
+                            active: modelData.icon && modelData.icon !== ""
                             
                             sourceComponent: {
                                 // Check if it's an image path (freedesktop icon)
-                                if (menuItem.icon && menuItem.icon.startsWith("image://")) {
+                                if (modelData.icon && modelData.icon.startsWith("image://")) {
                                     return imageIconComponent
-                                } else if (menuItem.icon && menuItem.icon !== "") {
+                                } else if (modelData.icon && modelData.icon !== "") {
                                     return fontIconComponent
                                 }
                                 return null
@@ -152,10 +175,10 @@ PanelWindow {
                             Component {
                                 id: fontIconComponent
                                 Text {
-                                    text: menuItem.icon
+                                    text: modelData.icon
                                     font.family: "JetBrainsMono Nerd Font Propo"
                                     font.pixelSize: 14
-                                    color: menuItem.enabled !== false ? 
+                                    color: modelData.enabled ? 
                                         Appearance.m3colors.on_surface : 
                                         Appearance.m3colors.on_surface_variant
                                 }
@@ -170,7 +193,7 @@ PanelWindow {
                                     Image {
                                         id: iconImage
                                         anchors.fill: parent
-                                        source: menuItem.icon
+                                        source: modelData.icon
                                         sourceSize.width: 16
                                         sourceSize.height: 16
                                         smooth: true
@@ -181,7 +204,7 @@ PanelWindow {
                                     ColorOverlay {
                                         anchors.fill: iconImage
                                         source: iconImage
-                                        color: menuItem.enabled !== false ? 
+                                        color: modelData.enabled ? 
                                             Appearance.m3colors.on_surface : 
                                             Appearance.m3colors.on_surface_variant
                                     }
@@ -192,10 +215,10 @@ PanelWindow {
                         // Text
                         Text {
                             anchors.verticalCenter: parent.verticalCenter
-                            text: menuItem.text || ""
+                            text: modelData.text || ""
                             font.family: "SF Pro Display"
                             font.pixelSize: 13
-                            color: menuItem.enabled !== false ? Appearance.m3colors.on_surface : Appearance.m3colors.on_surface_variant
+                            color: modelData.enabled ? Appearance.m3colors.on_surface : Appearance.m3colors.on_surface_variant
                         }
                     }
                     
@@ -206,37 +229,38 @@ PanelWindow {
                         height: 1
                         color: Appearance.m3colors.outline_variant
                         opacity: 0.5
-                        visible: menuItem.type === "separator"
+                        visible: modelData.isSeparator
                     }
                     
                     MouseArea {
                         id: mouseArea
                         anchors.fill: parent
-                        hoverEnabled: menuItem.type !== "separator"
-                        enabled: menuItem.type !== "separator"
-                        cursorShape: menuItem.enabled !== false ? Qt.PointingHandCursor : Qt.ArrowCursor
+                        hoverEnabled: !modelData.isSeparator
+                        enabled: !modelData.isSeparator && modelData.enabled
+                        cursorShape: modelData.enabled ? Qt.PointingHandCursor : Qt.ArrowCursor
                         
                         onClicked: {
-                            console.log("Menu item clicked:", menuItem.text)
-                            if (menuItem.enabled !== false && menuItem.action) {
-                                console.log("Executing action for:", menuItem.text)
+                            console.log("Menu item clicked:", modelData.text)
+                            if (modelData.enabled) {
+                                console.log("Triggering DBusMenuItem for:", modelData.text)
                                 try {
-                                    menuItem.action()
+                                    modelData.triggered()
                                 } catch (e) {
-                                    console.log("Error executing action:", e)
+                                    console.log("Error triggering:", e)
                                 }
                             }
                             root.visible = false
                         }
                     }
                     
-                    // Hover animation
-                    Behavior on color {
-                        ColorAnimation { duration: 150 }
-                    }
-                }
-            }
-        }
-    }
-    }
+                        // Hover animation
+                        Behavior on color {
+                            ColorAnimation { duration: 150 }
+                        }
+                    }  // Rectangle
+                }  // sourceComponent
+            }  // Loader delegate
+            }  // Repeater
+        }  // Column
+    }  // menuContainer
 }

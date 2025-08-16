@@ -123,21 +123,39 @@ FocusScope {
             }
             
             Keys.onReturnPressed: {
-                if (appResults.count > 0 && searchModel.get(0)) {
-                    const firstItem = searchModel.get(0)
-                    root.launchSearchResult(firstItem)
+                if (appResults.count > 0) {
+                    const selectedIndex = appResults.currentIndex >= 0 ? appResults.currentIndex : 0
+                    const selectedItem = searchModel.values[selectedIndex]
+                    if (selectedItem) {
+                        root.launchSearchResult(selectedItem)
+                    }
                 }
             }
             
             Keys.onEnterPressed: {
-                if (appResults.count > 0 && searchModel.get(0)) {
-                    const firstItem = searchModel.get(0)
-                    root.launchSearchResult(firstItem)
+                if (appResults.count > 0) {
+                    const selectedIndex = appResults.currentIndex >= 0 ? appResults.currentIndex : 0
+                    const selectedItem = searchModel.values[selectedIndex]
+                    if (selectedItem) {
+                        root.launchSearchResult(selectedItem)
+                    }
                 }
             }
             
             Keys.onEscapePressed: {
                 GlobalStates.overviewOpen = false
+            }
+            
+            Keys.onDownPressed: {
+                if (appResults.count > 0) {
+                    appResults.currentIndex = Math.min(appResults.currentIndex + 1, appResults.count - 1)
+                }
+            }
+            
+            Keys.onUpPressed: {
+                if (appResults.count > 0) {
+                    appResults.currentIndex = Math.max(appResults.currentIndex - 1, 0)
+                }
             }
         }  // TextField
         }  // RowLayout
@@ -173,6 +191,13 @@ FocusScope {
                 clip: true
                 spacing: 2
                 highlightMoveDuration: 100
+                
+                // Highlight component for selected item
+                highlight: Rectangle {
+                    radius: 8
+                    color: Appearance.m3colors.primary
+                    opacity: 0.1
+                }
                 
                 // Disable default add/remove animations
                 add: null

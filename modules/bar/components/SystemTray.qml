@@ -547,8 +547,19 @@ Item {
                                 // Create a menu item object from the DBusMenuItem
                                 // Treat empty text items as separators too
                                 const isEmptyText = !modelData.text || modelData.text.trim() === ""
+                                const isSeparator = modelData.isSeparator || isEmptyText
+                                
+                                // Skip consecutive separators
+                                if (isSeparator && menuOpener.extractedItems && menuOpener.extractedItems.length > 0) {
+                                    const lastItem = menuOpener.extractedItems[menuOpener.extractedItems.length - 1]
+                                    if (lastItem.type === "separator") {
+                                        console.log("Skipping consecutive separator")
+                                        return  // Skip this separator since the previous item was also a separator
+                                    }
+                                }
+                                
                                 const menuItem = {
-                                    type: (modelData.isSeparator || isEmptyText) ? "separator" : "action",
+                                    type: isSeparator ? "separator" : "action",
                                     text: modelData.text || "",
                                     icon: modelData.icon || "", // Keep the icon path from DBus
                                     enabled: modelData.enabled !== false,

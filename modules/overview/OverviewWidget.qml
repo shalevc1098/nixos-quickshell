@@ -5,6 +5,7 @@ import QtQuick.Layouts
 import Quickshell
 import Quickshell.Wayland
 import Quickshell.Hyprland
+import Qt5Compat.GraphicalEffects
 
 Item {
     id: root
@@ -219,83 +220,16 @@ Item {
                                 ColorAnimation { duration: 150 }
                             }
                             
-                            // Content - show workspace number when empty, app icons when has windows
-                            Item {
-                                anchors.fill: parent
-                                anchors.margins: 8
-                                
-                                // Workspace number (shown when no windows)
-                                Text {
-                                    visible: !workspace.hasWindows
-                                    anchors.centerIn: parent
-                                    text: workspaceValue.toString()
-                                    font.pixelSize: Math.min(root.workspaceImplicitWidth, root.workspaceImplicitHeight) * monitor.scale * root.scale
-                                    font.weight: Font.DemiBold
-                                    color: ColorUtils.transparentize(Appearance.m3colors.on_surface, 0.8)
-                                    horizontalAlignment: Text.AlignHCenter
-                                    verticalAlignment: Text.AlignVCenter
-                                }
-                                
-                                // App icons grid (shown when has windows)
-                                Grid {
-                                    visible: workspace.hasWindows
-                                    anchors.centerIn: parent
-                                    columns: Math.min(3, Math.ceil(Math.sqrt(workspace.workspaceClients?.length ?? 0)))
-                                    rows: Math.min(3, Math.ceil((workspace.workspaceClients?.length ?? 0) / columns))
-                                    spacing: 2
-                                    
-                                    Repeater {
-                                        model: Math.min(9, workspace.workspaceClients?.length ?? 0)
-                                        
-                                        Item {
-                                            width: 48
-                                            height: 48
-                                            
-                                            Image {
-                                                id: appIcon
-                                                anchors.fill: parent
-                                                source: {
-                                                    if (!workspace.workspaceClients || index >= workspace.workspaceClients.length) return ""
-                                                    
-                                                    const win = workspace.workspaceClients[index]
-                                                    const iconName = win?.class || ""
-                                                    
-                                                    if (!iconName) return ""
-                                                    
-                                                    // Try to get icon from CustomIconLoader first
-                                                    const customIcon = CustomIconLoader.getIconSource(iconName.toLowerCase())
-                                                    if (customIcon) return customIcon
-                                                    
-                                                    // Try to get system icon
-                                                    const systemIcon = Quickshell.iconPath(iconName.toLowerCase(), "")
-                                                    if (systemIcon) return systemIcon
-                                                    
-                                                    // Fallback to theme icon
-                                                    return "image://icon/" + iconName.toLowerCase()
-                                                }
-                                                fillMode: Image.PreserveAspectFit
-                                                smooth: true
-                                                mipmap: true
-                                                asynchronous: true
-                                                
-                                                // Fallback to text if icon fails
-                                                Text {
-                                                    visible: parent.status === Image.Error || parent.source === ""
-                                                    anchors.centerIn: parent
-                                                    text: {
-                                                        if (!workspace.workspaceClients || index >= workspace.workspaceClients.length) return ""
-                                                        const win = workspace.workspaceClients[index]
-                                                        return (win?.class || "?").substring(0, 1).toUpperCase()
-                                                    }
-                                                    font.pixelSize: 10
-                                                    font.family: "SF Pro Display"
-                                                    font.weight: Font.Medium
-                                                    color: ColorUtils.transparentize(Appearance.m3colors.on_surface, 0.5)
-                                                }
-                                            }
-                                        }
-                                    }
-                                }
+                            // Workspace number (shown when no windows)
+                            Text {
+                                visible: !workspace.hasWindows
+                                anchors.centerIn: parent
+                                text: workspaceValue.toString()
+                                font.pixelSize: Math.min(root.workspaceImplicitWidth, root.workspaceImplicitHeight) * monitor.scale * root.scale
+                                font.weight: Font.DemiBold
+                                color: ColorUtils.transparentize(Appearance.m3colors.on_surface, 0.8)
+                                horizontalAlignment: Text.AlignHCenter
+                                verticalAlignment: Text.AlignVCenter
                             }
                             
                             MouseArea {
@@ -339,44 +273,181 @@ Item {
             // Window repeater for all windows in current workspace group
             Repeater {
                 model: {
-                    if (!ToplevelManager.toplevels) return []
+                    if (!ToplevelManager.toplevels) {
+                        console.log("Window repeater: No ToplevelManager.toplevels")
+                        return []
+                    }
                     
-                    return ToplevelManager.toplevels.values.filter((toplevel) => {
+                    const filtered = ToplevelManager.toplevels.values.filter((toplevel) => {
                         if (!toplevel || !toplevel.HyprlandToplevel) return false
                         const address = `0x${toplevel.HyprlandToplevel.address}`
                         const win = windowByAddress[address]
                         if (!win) return false
                         
-                        const inWorkspaceGroup = (root.workspaceGroup * root.workspacesShown < win.workspace?.id && 
-                                                 win.workspace?.id <= (root.workspaceGroup + 1) * root.workspacesShown)
+                        const workspaceId = win.workspace?.id
+                        const groupStart = root.workspaceGroup * root.workspacesShown
+                        const groupEnd = (root.workspaceGroup + 1) * root.workspacesShown
+                        const inWorkspaceGroup = (groupStart < workspaceId && workspaceId <= groupEnd)
+                        
                         return inWorkspaceGroup
                     })
+                    return filtered
                 }
                 
-                delegate: OverviewWindow {
-                    id: windowDelegate
+                delegate: Item {
+                    id: window
                     required property var modelData
                     
                     property var address: modelData.HyprlandToplevel ? `0x${modelData.HyprlandToplevel.address}` : null
+                    property var windowData: address ? windowByAddress[address] : null
+                    property var monitorData: windowData ? HyprlandData.monitors.find(m => m.id === windowData.monitor) : null
                     
-                    toplevel: modelData
-                    windowData: address ? windowByAddress[address] : null
-                    monitorData: windowData ? HyprlandData.monitors.find(m => m.id === windowData.monitor) : null
-                    scale: root.scale
-                    availableWorkspaceWidth: root.workspaceImplicitWidth
-                    availableWorkspaceHeight: root.workspaceImplicitHeight
-                    widgetMonitorId: root.monitor?.id || 0
-                    
+                    // Calculate workspace offset like end4's
                     property int workspaceColIndex: windowData ? ((windowData.workspace.id - 1) % root.columns) : 0
                     property int workspaceRowIndex: windowData ? Math.floor((windowData.workspace.id - 1) % root.workspacesShown / root.columns) : 0
-                    xOffset: (root.workspaceImplicitWidth + workspaceSpacing) * workspaceColIndex
-                    yOffset: (root.workspaceImplicitHeight + workspaceSpacing) * workspaceRowIndex
+                    property real xOffset: (root.workspaceImplicitWidth + workspaceSpacing) * workspaceColIndex
+                    property real yOffset: (root.workspaceImplicitHeight + workspaceSpacing) * workspaceRowIndex
                     
-                    z: pressed ? root.windowDraggingZ : root.windowZ
+                    // End4's exact positioning approach - with property bindings that auto-update
+                    property real initX: windowData && monitorData ? 
+                        Math.max((windowData.at[0] - (monitorData.x || 0) - (monitorData.reserved?.[0] || 0)) * root.scale, 0) + xOffset : xOffset
+                    property real initY: windowData && monitorData ? 
+                        Math.max((windowData.at[1] - (monitorData.y || 0) - (monitorData.reserved?.[1] || 0)) * root.scale, 0) + yOffset : yOffset
                     
+                    
+                    property bool hovered: false
+                    property bool pressed: false
+                    property bool atInitPosition: (initX == x && initY == y)
+                    
+                    // End4's exact property bindings for automatic updates
+                    x: initX
+                    y: initY
+                    width: windowData ? windowData.size[0] * root.scale : 60
+                    height: windowData ? windowData.size[1] * root.scale : 40
+                    opacity: windowData && monitorData ? (root.monitor?.id === windowData.monitor ? 1.0 : 0.4) : 0.4
+                    
+                    z: atInitPosition ? root.windowZ : root.windowDraggingZ
+                    
+                    // End4's smooth animations
+                    Behavior on x {
+                        NumberAnimation {
+                            duration: 200
+                            easing.type: Easing.OutCubic
+                        }
+                    }
+                    Behavior on y {
+                        NumberAnimation {
+                            duration: 200
+                            easing.type: Easing.OutCubic
+                        }
+                    }
+                    Behavior on width {
+                        NumberAnimation {
+                            duration: 200
+                            easing.type: Easing.OutCubic
+                        }
+                    }
+                    Behavior on height {
+                        NumberAnimation {
+                            duration: 200
+                            easing.type: Easing.OutCubic
+                        }
+                    }
+                    
+                    // Live window preview with icon overlay - best of both worlds
+                    Item {
+                        anchors.fill: parent
+                        
+                        // Rounded corners mask
+                        layer.enabled: true
+                        layer.effect: OpacityMask {
+                            maskSource: Rectangle {
+                                width: window.width
+                                height: window.height
+                                radius: 8 * root.scale
+                            }
+                        }
+                        
+                        // Live window preview like end4's
+                        ScreencopyView {
+                            id: windowPreview
+                            anchors.fill: parent
+                            captureSource: modelData
+                            live: true
+                        }
+                        
+                        // Semi-transparent overlay for interactions
+                        Rectangle {
+                            anchors.fill: parent
+                            radius: 8 * root.scale
+                            color: window.pressed ? ColorUtils.transparentize(Appearance.m3colors.surface_container_highest, 0.3) : 
+                                   window.hovered ? ColorUtils.transparentize(Appearance.m3colors.surface_container_high, 0.5) : 
+                                   "transparent"
+                            border.color: window.pressed ? Appearance.m3colors.primary : 
+                                          (window.hovered ? Appearance.m3colors.outline : Appearance.m3colors.outline_variant)
+                            border.width: window.pressed || window.hovered ? 1 : 0
+                            
+                            Behavior on color {
+                                ColorAnimation { duration: 150 }
+                            }
+                        }
+                        
+                        // App icon overlay in center - transparent background
+                        Item {
+                            anchors.centerIn: parent
+                            
+                            property real iconSize: {
+                                const minDimension = Math.min(window.width, window.height)
+                                const targetSize = minDimension * 0.4 // 40% of window size - slightly smaller
+                                return Math.max(targetSize, 20) // Minimum 20px
+                            }
+                            
+                            width: iconSize
+                            height: iconSize
+                            
+                            Image {
+                                id: windowIcon
+                                anchors.centerIn: parent
+                                
+                                width: parent.iconSize
+                                height: parent.iconSize
+                                
+                                source: {
+                                    if (!windowData) return ""
+                                    return Quickshell.iconPath(windowData.class || "", "image-missing")
+                                }
+                                
+                                sourceSize: Qt.size(parent.iconSize, parent.iconSize)
+                                fillMode: Image.PreserveAspectFit
+                                smooth: true
+                                mipmap: true
+                                asynchronous: true
+                                
+                                Behavior on width {
+                                    NumberAnimation { duration: 200 }
+                                }
+                                Behavior on height {
+                                    NumberAnimation { duration: 200 }
+                                }
+                                
+                                // Fallback text
+                                Text {
+                                    visible: parent.status === Image.Error || parent.source === ""
+                                    anchors.centerIn: parent
+                                    text: windowData ? (windowData.class || "?").substring(0, 1).toUpperCase() : "?"
+                                    font.pixelSize: parent.width * 0.5
+                                    font.family: "SF Pro Display"
+                                    font.weight: Font.Medium
+                                    color: Appearance.m3colors.on_surface
+                                }
+                            }
+                        }
+                    }
+                    
+                    // End4's drag and drop implementation
                     Drag.active: pressed
-                    Drag.hotSpot.x: targetWindowWidth / 2
-                    Drag.hotSpot.y: targetWindowHeight / 2
+                    Drag.hotSpot.x: width / 2
+                    Drag.hotSpot.y: height / 2
                     
                     MouseArea {
                         id: dragArea
@@ -406,6 +477,7 @@ Item {
                             if (targetWorkspace !== -1 && parent.windowData && targetWorkspace !== parent.windowData.workspace.id) {
                                 Hyprland.dispatch(`movetoworkspacesilent ${targetWorkspace}, address:${parent.windowData.address}`)
                             } else {
+                                // Snap back to original position like end4's
                                 parent.x = parent.initX
                                 parent.y = parent.initY
                             }

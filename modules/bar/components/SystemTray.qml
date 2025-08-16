@@ -5,6 +5,7 @@ import QtQuick
 import QtQuick.Controls
 import Quickshell
 import Quickshell.Services.SystemTray
+import Quickshell.DBusMenu
 
 Item {
     id: root
@@ -14,14 +15,38 @@ Item {
     implicitWidth: trayRow.visible ? trayRow.implicitWidth : placeholderText.implicitWidth
     implicitHeight: 20
     
-    // Custom menu component
-    SystemTrayMenu {
-        id: customMenu
-        anchor.window: root.panelWindow
+    // Custom menu component (using Scope and Loader like MPRIS popup)
+    property bool menuOpen: false
+    property var menuItems: []
+    property var menuSourceRect: ({ x: 0, y: 0, width: 0, height: 0 })
+    
+    Scope {
+        id: menuScope
+        
+        Loader {
+            id: menuLoader
+            active: root.menuOpen
+            
+            sourceComponent: SystemTrayMenu {
+                id: customMenu
+                menuItems: root.menuItems
+                sourceRect: root.menuSourceRect
+                
+                Component.onCompleted: {
+                    visible = true
+                }
+                
+                onVisibleChanged: {
+                    if (!visible) {
+                        root.menuOpen = false
+                    }
+                }
+            }
+        }
     }
     
     // Function to create app-specific menu items
-    function createAppSpecificMenu(trayItem) {
+    function createAppSpecificMenu(trayItem, menuAnchor) {
         const appId = trayItem.id || ""
         console.log("Creating app-specific menu for:", appId)
         
@@ -67,23 +92,23 @@ Item {
                 
             case "blueman":
             case "blueman-applet":
+                // For blueman, try to use the default menu instead
+                // since it has many dynamic options based on connected devices
                 return [
                     {
                         type: "action",
-                        text: "Open Bluetooth Manager",
+                        text: "Open Default Blueman Menu",
                         icon: "󰂯",
                         enabled: true,
                         action: function() { 
-                            trayItem.activate()
-                        }
-                    },
-                    {
-                        type: "action",
-                        text: "Toggle Bluetooth",
-                        icon: "󰂲",
-                        enabled: true,
-                        action: function() {
-                            console.log("Toggle Bluetooth clicked")
+                            // Close our menu and open the default one
+                            root.menuOpen = false
+                            Qt.callLater(() => {
+                                if (menuAnchor) {
+                                    menuAnchor.updatePosition()
+                                    menuAnchor.open()
+                                }
+                            })
                         }
                     },
                     {
@@ -93,11 +118,11 @@ Item {
                     },
                     {
                         type: "action",
-                        text: "Exit",
-                        icon: "󰅖",
+                        text: "Open Bluetooth Settings",
+                        icon: "󰂯",
                         enabled: true,
-                        action: function() {
-                            console.log("Exit Blueman clicked")
+                        action: function() { 
+                            trayItem.activate()
                         }
                     }
                 ]
@@ -189,7 +214,7 @@ Item {
     
     
     // Function to show custom menu at specific position
-    function showCustomMenu(trayItem, mouseArea, menuOpener) {
+    function showCustomMenu(trayItem, mouseArea, menuOpener, menuAnchor) {
         if (!trayItem) {
             return false
         }
@@ -197,21 +222,23 @@ Item {
         console.log("showCustomMenu called for trayItem:", trayItem.id, "hasMenu:", trayItem.hasMenu)
         
         try {
-            let menuItems = []
+            let items = []
             
-            // Try to get items from the menuOpener first
-            if (menuOpener && menuOpener.children) {
-                console.log("Trying to extract from menuOpener.children")
-                menuItems = extractMenuFromOpener(menuOpener)
+            // Use the extractedItems collected by the Repeater
+            if (menuOpener && menuOpener.extractedItems && menuOpener.extractedItems.length > 0) {
+                console.log("Using", menuOpener.extractedItems.length, "pre-extracted DBus menu items")
+                items = menuOpener.extractedItems
             }
             
-            // If no items found, use app-specific menu
-            if (menuItems.length === 0) {
-                console.log("Using app-specific menu as fallback")
-                menuItems = createAppSpecificMenu(trayItem)
+            // If no items found, use app-specific menu as fallback
+            if (items.length === 0) {
+                console.log("No DBus menu items found, using app-specific menu as fallback")
+                items = createAppSpecificMenu(trayItem, menuAnchor)
+            } else {
+                console.log("Successfully using", items.length, "DBus menu items")
             }
             
-            console.log("Menu items to show:", menuItems.length)
+            console.log("Menu items to show:", items.length)
             
             // Calculate position relative to the tray icon
             const mapped = root.panelWindow.mapFromItem(mouseArea, 0, 0)
@@ -222,7 +249,11 @@ Item {
                 height: mouseArea.height
             }
             
-            customMenu.showMenu(menuItems, rect)
+            // Set properties and open menu
+            root.menuItems = items
+            root.menuSourceRect = rect
+            root.menuOpen = true
+            
             return true
         } catch (e) {
             console.log("Error showing custom menu:", e)
@@ -239,9 +270,28 @@ Item {
         
         const items = []
         const childrenModel = opener.children
-        const count = childrenModel.count || 0
         
-        console.log("Extracting from opener, children count:", count)
+        // Try different ways to get the count
+        let count = 0
+        if (childrenModel.count !== undefined) {
+            count = childrenModel.count
+        } else {
+            // Try to iterate with a reasonable maximum
+            for (let i = 0; i < 100; i++) {
+                try {
+                    const item = childrenModel.get(i)
+                    if (item) {
+                        count++
+                    } else {
+                        break
+                    }
+                } catch (e) {
+                    break
+                }
+            }
+        }
+        
+        console.log("Extracting from opener, detected count:", count)
         
         for (let i = 0; i < count; i++) {
             try {
@@ -253,19 +303,23 @@ Item {
                     continue
                 }
                 
-                console.log(`Processing child ${i}:`, child)
-                console.log(`Child properties:`, Object.getOwnPropertyNames(child))
+                console.log(`Processing DBusMenuItem ${i}:`)
+                console.log(`  Text: ${child.text}`)
+                console.log(`  Enabled: ${child.enabled}`)
+                console.log(`  IsSeparator: ${child.isSeparator}`)
                 
                 // Check if it's a separator
-                if (child.isSeparator || child.separator) {
+                if (child.isSeparator) {
                     items.push({
                         type: "separator",
                         text: "",
                         enabled: false
                     })
                 } else {
-                    // Extract menu item properties - QsMenuEntry properties
-                    const text = child.text || child.label || child.title || `Item ${i + 1}`
+                    // DBusMenuItem has these properties available:
+                    // text, enabled, isSeparator, icon, hasChildren, buttonType, checkState
+                    // and methods: triggered(), opened(), closed(), display(), updateLayout()
+                    const text = child.text || `Item ${i + 1}`
                     const enabled = child.enabled !== false
                     const hasChildren = child.hasChildren || false
                     const icon = child.icon || ""
@@ -278,15 +332,13 @@ Item {
                         hasSubmenu: hasChildren,
                         action: function() {
                             console.log("Menu item clicked:", text)
-                            // QsMenuEntry has trigger() method
-                            if (child.trigger) {
-                                console.log("Triggering menu item")
-                                child.trigger()
-                            } else if (child.activate) {
-                                console.log("Activating menu item")
-                                child.activate()
-                            } else {
-                                console.log("No trigger method found for item")
+                            // DBusMenuItem has triggered() signal/method
+                            try {
+                                // The triggered() signal needs to be emitted
+                                child.triggered()
+                                console.log("DBusMenuItem triggered successfully")
+                            } catch (e) {
+                                console.log("Error triggering DBusMenuItem:", e)
                             }
                         }
                     })
@@ -360,6 +412,7 @@ Item {
                     
                     property var menuChildren: children
                     property bool menuLoaded: false
+                    property var extractedItems: []
                     
                     onMenuChanged: {
                         console.log("MenuOpener menu changed for:", modelData.id)
@@ -385,17 +438,47 @@ Item {
                                     console.log(`  ${prop}: [error accessing]`)
                                 }
                             }
+                            
+                            // Try to call menu methods that might be available
+                            try {
+                                if (menu.getLayout) {
+                                    console.log("Trying getLayout...")
+                                    const layout = menu.getLayout()
+                                    console.log("Layout result:", layout)
+                                }
+                            } catch (e) {
+                                console.log("getLayout not available or failed:", e)
+                            }
+                            
+                            try {
+                                if (menu.items) {
+                                    console.log("Menu.items:", menu.items)
+                                }
+                            } catch (e) {
+                                console.log("menu.items not available:", e)
+                            }
                         }
                         
                         console.log("Children model:", children)
                         if (children) {
                             console.log("Children count:", children.count || 0)
+                            
+                            // Try direct iteration if children is a list
+                            try {
+                                for (let i = 0; i < children.length; i++) {
+                                    console.log(`Direct child ${i}:`, children[i])
+                                }
+                            } catch (e) {
+                                console.log("Direct iteration failed:", e)
+                            }
                         }
                     }
                     
                     onChildrenChanged: {
                         console.log("MenuOpener children changed for:", modelData.id)
                         console.log("New children:", children)
+                        // Clear old items when menu changes
+                        extractedItems = []
                         if (children) {
                             const count = children.count || 0
                             console.log("Children count:", count)
@@ -452,6 +535,47 @@ Item {
                     }
                 }
                 
+                // Use a Repeater to collect DBus menu items
+                Repeater {
+                    id: menuRepeater
+                    model: menuOpener.children
+                    delegate: Item {
+                        Component.onCompleted: {
+                            if (modelData) {
+                                console.log("DBus menu item found:", modelData.text)
+                                
+                                // Create a menu item object from the DBusMenuItem
+                                // Treat empty text items as separators too
+                                const isEmptyText = !modelData.text || modelData.text.trim() === ""
+                                const menuItem = {
+                                    type: (modelData.isSeparator || isEmptyText) ? "separator" : "action",
+                                    text: modelData.text || "",
+                                    icon: modelData.icon || "", // Keep the icon path from DBus
+                                    enabled: modelData.enabled !== false,
+                                    hasSubmenu: modelData.hasChildren || false,
+                                    dbusItem: modelData,  // Keep reference to the original item
+                                    action: function() {
+                                        console.log("Menu item clicked:", modelData.text)
+                                        try {
+                                            modelData.triggered()
+                                            console.log("DBusMenuItem triggered successfully")
+                                        } catch (e) {
+                                            console.log("Error triggering DBusMenuItem:", e)
+                                        }
+                                    }
+                                }
+                                
+                                // Add to the extracted items array
+                                if (!menuOpener.extractedItems) {
+                                    menuOpener.extractedItems = []
+                                }
+                                menuOpener.extractedItems.push(menuItem)
+                                console.log("Added item to extractedItems, total:", menuOpener.extractedItems.length)
+                            }
+                        }
+                    }
+                }
+                
                 
                 Image {
                     id: trayIcon
@@ -474,13 +598,15 @@ Item {
                     
                     onClicked: (mouse) => {
                         console.log("Tray item clicked:", mouse.button, "modelData.id:", modelData.id)
+                        console.log("  menuOpener.children:", menuOpener.children)
+                        console.log("  menuOpener.children.count:", menuOpener.children ? menuOpener.children.count : 0)
                         
                         if (mouse.button === Qt.LeftButton) {
                             // Left click - activate the item
                             if (modelData.onlyMenu && modelData.hasMenu) {
                                 // If only menu, try custom menu first, fallback to default
                                 console.log("Left click on menu-only item, showing custom menu")
-                                if (!showCustomMenu(modelData, mouseArea, menuOpener)) {
+                                if (!showCustomMenu(modelData, mouseArea, menuOpener, menuAnchor)) {
                                     menuAnchor.updatePosition()
                                     if (menuAnchor.anchor.window) {
                                         menuAnchor.open()
@@ -494,7 +620,7 @@ Item {
                         } else if (mouse.button === Qt.RightButton) {
                             // Right click - ALWAYS show our custom menu first
                             console.log("Right click - showing custom menu")
-                            if (!showCustomMenu(modelData, mouseArea, menuOpener)) {
+                            if (!showCustomMenu(modelData, mouseArea, menuOpener, menuAnchor)) {
                                 console.log("Custom menu failed, trying default")
                                 // Only fallback to default if the app actually has a menu
                                 if (modelData.hasMenu) {

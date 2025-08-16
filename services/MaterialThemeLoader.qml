@@ -36,7 +36,7 @@ Singleton {
     
     Timer {
         id: delayedFileRead
-        interval: Config.options?.hacks?.arbitraryRaceConditionDelay ?? 100
+        interval: Config.hacks.arbitraryRaceConditionDelay
         repeat: false
         running: false
         onTriggered: {

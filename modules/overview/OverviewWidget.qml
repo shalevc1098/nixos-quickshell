@@ -323,11 +323,29 @@ Item {
                         const relativeX = (windowData.at[0] - (windowMonitor.x || 0) - (windowMonitor.reserved?.[0] || 0))
                         const relativeXPercent = relativeX / windowMonitorWorkspaceWidth
                         
-                        // For cross-monitor, scale proportionally to fit within workspace
+                        // For cross-monitor, scale proportionally to fit within workspace (both directions)
                         if (windowMonitor.id !== overviewMonitor.id) {
                             // Scale proportionally to fit within this overview's workspace
                             const scaledX = relativeXPercent * root.workspaceImplicitWidth
-                            return Math.max(Math.min(scaledX, root.workspaceImplicitWidth - 20), 0) + xOffset
+                            
+                            // Apply monitor scale adjustment only when scaling up (making bigger)
+                            const windowScale = windowMonitor.scale || 1
+                            const overviewScale = overviewMonitor.scale || 1
+                            let finalScaledX = scaledX
+                            
+                            if (overviewScale < windowScale) {
+                                // Making things bigger: apply scale adjustment
+                                const scaleAdjustment = windowScale - overviewScale
+                                finalScaledX = scaledX * (1 + scaleAdjustment)
+                            }
+                            // If making things smaller: use original proportional scaling (no adjustment)
+                            
+                            // Clamp within the actual workspace bounds (relative to xOffset)
+                            const workspaceMinX = xOffset
+                            const workspaceMaxX = xOffset + root.workspaceImplicitWidth - 20
+                            const finalX = Math.max(Math.min(finalScaledX + xOffset, workspaceMaxX), workspaceMinX)
+                            
+                            return finalX
                         }
                         
                         // Same monitor: use normal positioning
@@ -346,11 +364,29 @@ Item {
                         const relativeY = (windowData.at[1] - (windowMonitor.y || 0) - (windowMonitor.reserved?.[1] || 0))
                         const relativeYPercent = relativeY / windowMonitorWorkspaceHeight
                         
-                        // For cross-monitor, scale proportionally to fit within workspace
+                        // For cross-monitor, scale proportionally to fit within workspace (both directions)
                         if (windowMonitor.id !== overviewMonitor.id) {
                             // Scale proportionally to fit within this overview's workspace
                             const scaledY = relativeYPercent * root.workspaceImplicitHeight
-                            return Math.max(Math.min(scaledY, root.workspaceImplicitHeight - 20), 0) + yOffset
+                            
+                            // Apply monitor scale adjustment only when scaling up (making bigger)
+                            const windowScale = windowMonitor.scale || 1
+                            const overviewScale = overviewMonitor.scale || 1
+                            let finalScaledY = scaledY
+                            
+                            if (overviewScale < windowScale) {
+                                // Making things bigger: apply scale adjustment
+                                const scaleAdjustment = windowScale - overviewScale
+                                finalScaledY = scaledY * (1 + scaleAdjustment)
+                            }
+                            // If making things smaller: use original proportional scaling (no adjustment)
+                            
+                            // Clamp within the actual workspace bounds (relative to yOffset)
+                            const workspaceMinY = yOffset
+                            const workspaceMaxY = yOffset + root.workspaceImplicitHeight - 20
+                            const finalY = Math.max(Math.min(finalScaledY + yOffset, workspaceMaxY), workspaceMinY)
+                            
+                            return finalY
                         }
                         
                         // Same monitor: use normal positioning
@@ -375,8 +411,21 @@ Item {
                             // Use proportional scaling instead of resolution ratio
                             const windowMonitorWorkspaceWidth = monitorData.width - (monitorData.reserved?.[0] || 0) - (monitorData.reserved?.[2] || 0)
                             const widthPercent = baseWidth / windowMonitorWorkspaceWidth
-                            const newWidth = widthPercent * root.workspaceImplicitWidth
-                            return newWidth // Don't scale again - already scaled to workspace size
+                            const scaledWidth = widthPercent * root.workspaceImplicitWidth
+                            
+                            // Apply monitor scale adjustment only when scaling up (making bigger)
+                            const windowScale = monitorData.scale || 1
+                            const overviewScale = root.monitorData.scale || 1
+                            let finalWidth = scaledWidth
+                            
+                            if (overviewScale < windowScale) {
+                                // Making things bigger: apply scale adjustment
+                                const scaleAdjustment = windowScale - overviewScale
+                                finalWidth = scaledWidth * (1 + scaleAdjustment)
+                            }
+                            // If making things smaller: use original proportional scaling (no adjustment)
+                            
+                            return finalWidth
                         }
                         
                         return baseWidth * root.scale
@@ -391,8 +440,21 @@ Item {
                             // Use proportional scaling instead of resolution ratio
                             const windowMonitorWorkspaceHeight = monitorData.height - (monitorData.reserved?.[1] || 0) - (monitorData.reserved?.[3] || 0)
                             const heightPercent = baseHeight / windowMonitorWorkspaceHeight
-                            const newHeight = heightPercent * root.workspaceImplicitHeight
-                            return newHeight // Don't scale again - already scaled to workspace size
+                            const scaledHeight = heightPercent * root.workspaceImplicitHeight
+                            
+                            // Apply monitor scale adjustment only when scaling up (making bigger)
+                            const windowScale = monitorData.scale || 1
+                            const overviewScale = root.monitorData.scale || 1
+                            let finalHeight = scaledHeight
+                            
+                            if (overviewScale < windowScale) {
+                                // Making things bigger: apply scale adjustment
+                                const scaleAdjustment = windowScale - overviewScale
+                                finalHeight = scaledHeight * (1 + scaleAdjustment)
+                            }
+                            // If making things smaller: use original proportional scaling (no adjustment)
+                            
+                            return finalHeight
                         }
                         
                         return baseHeight * root.scale

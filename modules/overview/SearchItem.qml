@@ -34,6 +34,7 @@ Rectangle {
     property bool hovered: mouseArea.containsMouse
     property bool down: mouseArea.pressed
     property bool isFocused: false
+    property bool isCurrentItem: false  // Will be set by ListView when this is the current item
     
     signal clicked()
 
@@ -41,8 +42,9 @@ Rectangle {
     implicitWidth: rowLayout.implicitWidth + root.buttonHorizontalPadding * 2
     radius: 8
     color: (root.down || root.keyboardDown) ? ColorUtils.transparentize(Appearance.m3colors.secondary_container, 0.7) : 
+        (root.isCurrentItem ? ColorUtils.transparentize(Appearance.m3colors.primary_container, 0.9) :
         ((root.hovered || root.isFocused) ? ColorUtils.transparentize(Appearance.m3colors.secondary_container, 0.85) : 
-        "transparent")
+        "transparent"))
 
     property string highlightPrefix: `<u><font color="${Appearance.m3colors.primary}">`
     property string highlightSuffix: `</font></u>`
@@ -188,24 +190,6 @@ Rectangle {
                 text: root.itemType
             }
             RowLayout {
-                Loader { // Checkmark for copied clipboard entry
-                    visible: itemName == Quickshell.clipboardText && root.cliphistRawString
-                    active: itemName == Quickshell.clipboardText && root.cliphistRawString
-                    sourceComponent: Rectangle {
-                        implicitWidth: activeText.implicitHeight
-                        implicitHeight: activeText.implicitHeight
-                        radius: height / 2
-                        color: Appearance.m3colors.primary
-                        Text {
-                            id: activeText
-                            anchors.centerIn: parent
-                            text: "✓"
-                            font.pixelSize: 12
-                            font.family: "SF Pro Display"
-                            color: Appearance.m3colors.on_primary
-                        }
-                    }
-                }
                 Repeater { // Favicons for links
                     model: root.query == root.itemName ? [] : root.urls
                     delegate: Item {

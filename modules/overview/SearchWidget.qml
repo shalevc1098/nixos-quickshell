@@ -8,7 +8,6 @@ import QtQuick.Effects
 import Quickshell
 import Quickshell.Io
 import Quickshell.Widgets
-import "."
 
 FocusScope {
     id: root
@@ -107,7 +106,7 @@ FocusScope {
                     }
                 }
             
-            placeholderText: "Search, calculate or run"
+            placeholderText: "Search"
             font.family: "SF Pro Display"
             font.pixelSize: 14
             color: searchField.activeFocus ? Appearance.m3colors.on_surface : Appearance.m3colors.on_surface_variant

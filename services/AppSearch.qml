@@ -23,7 +23,7 @@ Singleton {
     }))
     
     Component.onCompleted: {
-        console.log("AppSearch loaded", applications.length, "applications")
+        console.log("AppSearch loaded", list.length, "applications")
     }
     
     function search(query) {

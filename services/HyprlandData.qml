@@ -60,38 +60,43 @@ Singleton {
         const newWindowByAddress = {}
         const newAddresses = []
         
-        if (!Hyprland.clients) {
+        
+        if (!Hyprland.toplevels) {
             root.windowList = newWindowList
             root.windowByAddress = newWindowByAddress
             root.addresses = newAddresses
             return
         }
         
-        for (const client of Hyprland.clients.values) {
-            if (!client) continue
+        for (const toplevel of Hyprland.toplevels.values) {
+            if (!toplevel) continue
+            
+            
+            // Get data from lastIpcObject which contains the actual client info
+            const ipcData = toplevel.lastIpcObject || {}
             
             const windowData = {
-                address: client.address,
-                at: [client.x, client.y],
-                size: [client.width, client.height],
+                address: toplevel.address,
+                at: [ipcData.at?.[0] || 0, ipcData.at?.[1] || 0],
+                size: [ipcData.size?.[0] || 0, ipcData.size?.[1] || 0],
                 workspace: {
-                    id: client.workspace?.id || 1,
-                    name: client.workspace?.name || "1"
+                    id: toplevel.workspace?.id || ipcData.workspace?.id || 1,
+                    name: toplevel.workspace?.name || ipcData.workspace?.name || "1"
                 },
-                floating: client.floating,
-                monitor: client.monitor?.id || 0,
-                class: client.class_ || "",
-                title: client.title || "",
-                pid: client.pid,
-                xwayland: client.xwayland,
-                pinned: client.pinned,
-                fullscreen: client.fullscreen,
-                fullscreenClient: client.fullscreenClient
+                floating: ipcData.floating || false,
+                monitor: toplevel.monitor?.id || ipcData.monitor || 0,
+                class: ipcData.class || "",
+                title: toplevel.title || ipcData.title || "",
+                pid: ipcData.pid || 0,
+                xwayland: ipcData.xwayland || false,
+                pinned: ipcData.pinned || false,
+                fullscreen: ipcData.fullscreen || false,
+                fullscreenClient: ipcData.fullscreenClient || false
             }
             
             newWindowList.push(windowData)
-            newWindowByAddress[client.address] = windowData
-            newAddresses.push(client.address)
+            newWindowByAddress[toplevel.address] = windowData
+            newAddresses.push(toplevel.address)
         }
         
         root.windowList = newWindowList

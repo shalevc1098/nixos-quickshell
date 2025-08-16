@@ -189,6 +189,24 @@ Item {
                             property int workspaceValue: root.workspaceGroup * workspacesShown + rowIndex * root.columns + colIndex + 1
                             property bool hoveredWhileDragging: false
                             
+                            // Get windows for this workspace using HyprlandData.windowList
+                            property var workspaceClients: {
+                                if (!windows) return []
+                                
+                                return windows.filter(win => win && win.workspace && win.workspace.id === workspaceValue)
+                            }
+                            property bool hasWindows: workspaceClients.length > 0
+                            
+                            // Update when window data changes
+                            Connections {
+                                target: root
+                                function onWindowByAddressChanged() {
+                                    // Force property re-evaluation
+                                    workspace.workspaceClientsChanged()
+                                }
+                            }
+                            
+                            
                             implicitWidth: root.workspaceImplicitWidth
                             implicitHeight: root.workspaceImplicitHeight
                             
@@ -201,15 +219,83 @@ Item {
                                 ColorAnimation { duration: 150 }
                             }
                             
-                            // Workspace number - sized exactly like End's
-                            Text {
-                                anchors.centerIn: parent
-                                text: workspaceValue.toString()
-                                font.pixelSize: Math.min(root.workspaceImplicitWidth, root.workspaceImplicitHeight) * monitor.scale * root.scale
-                                font.weight: Font.DemiBold
-                                color: ColorUtils.transparentize(Appearance.m3colors.on_surface, 0.8)
-                                horizontalAlignment: Text.AlignHCenter
-                                verticalAlignment: Text.AlignVCenter
+                            // Content - show workspace number when empty, app icons when has windows
+                            Item {
+                                anchors.fill: parent
+                                anchors.margins: 8
+                                
+                                // Workspace number (shown when no windows)
+                                Text {
+                                    visible: !workspace.hasWindows
+                                    anchors.centerIn: parent
+                                    text: workspaceValue.toString()
+                                    font.pixelSize: Math.min(root.workspaceImplicitWidth, root.workspaceImplicitHeight) * monitor.scale * root.scale
+                                    font.weight: Font.DemiBold
+                                    color: ColorUtils.transparentize(Appearance.m3colors.on_surface, 0.8)
+                                    horizontalAlignment: Text.AlignHCenter
+                                    verticalAlignment: Text.AlignVCenter
+                                }
+                                
+                                // App icons grid (shown when has windows)
+                                Grid {
+                                    visible: workspace.hasWindows
+                                    anchors.centerIn: parent
+                                    columns: Math.min(3, Math.ceil(Math.sqrt(workspace.workspaceClients?.length ?? 0)))
+                                    rows: Math.min(3, Math.ceil((workspace.workspaceClients?.length ?? 0) / columns))
+                                    spacing: 2
+                                    
+                                    Repeater {
+                                        model: Math.min(9, workspace.workspaceClients?.length ?? 0)
+                                        
+                                        Item {
+                                            width: 48
+                                            height: 48
+                                            
+                                            Image {
+                                                id: appIcon
+                                                anchors.fill: parent
+                                                source: {
+                                                    if (!workspace.workspaceClients || index >= workspace.workspaceClients.length) return ""
+                                                    
+                                                    const win = workspace.workspaceClients[index]
+                                                    const iconName = win?.class || ""
+                                                    
+                                                    if (!iconName) return ""
+                                                    
+                                                    // Try to get icon from CustomIconLoader first
+                                                    const customIcon = CustomIconLoader.getIconSource(iconName.toLowerCase())
+                                                    if (customIcon) return customIcon
+                                                    
+                                                    // Try to get system icon
+                                                    const systemIcon = Quickshell.iconPath(iconName.toLowerCase(), "")
+                                                    if (systemIcon) return systemIcon
+                                                    
+                                                    // Fallback to theme icon
+                                                    return "image://icon/" + iconName.toLowerCase()
+                                                }
+                                                fillMode: Image.PreserveAspectFit
+                                                smooth: true
+                                                mipmap: true
+                                                asynchronous: true
+                                                
+                                                // Fallback to text if icon fails
+                                                Text {
+                                                    visible: parent.status === Image.Error || parent.source === ""
+                                                    anchors.centerIn: parent
+                                                    text: {
+                                                        if (!workspace.workspaceClients || index >= workspace.workspaceClients.length) return ""
+                                                        const win = workspace.workspaceClients[index]
+                                                        return (win?.class || "?").substring(0, 1).toUpperCase()
+                                                    }
+                                                    font.pixelSize: 10
+                                                    font.family: "SF Pro Display"
+                                                    font.weight: Font.Medium
+                                                    color: ColorUtils.transparentize(Appearance.m3colors.on_surface, 0.5)
+                                                }
+                                            }
+                                        }
+                                    }
+                                }
                             }
                             
                             MouseArea {

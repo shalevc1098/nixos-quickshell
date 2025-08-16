@@ -1,0 +1,14 @@
+# Claude-related files
+.claude/
+CLAUDE.md
+
+# System files
+.DS_Store
+*.swp
+*.swo
+*~
+
+# Qt/QML cache
+*.qmlc
+*.jsc
+*.qmltypes

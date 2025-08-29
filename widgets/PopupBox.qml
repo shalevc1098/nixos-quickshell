@@ -52,10 +52,10 @@ PopupWindow {
     visible: showing && anchorWindow !== null
     color: "transparent"
     
-    // Container with slide animation
+    // Container with height expansion animation
     Item {
         anchors.fill: parent
-        clip: true // Clip the sliding content
+        clip: true  // Clip the expanding content
         
         Rectangle {
             id: backgroundRect
@@ -66,7 +66,7 @@ PopupWindow {
             border.width: 1
             border.color: Appearance.m3colors.surface_container_high
             
-            // Slide animation using y position
+            // Slide from top while parent expands
             y: popupBox.showing ? 0 : -height
             
             Behavior on y {
@@ -76,7 +76,7 @@ PopupWindow {
                 }
             }
             
-            // Content wrapper with fade animation
+            // Content wrapper with fade
             Item {
                 anchors.fill: parent
                 anchors.margins: 10

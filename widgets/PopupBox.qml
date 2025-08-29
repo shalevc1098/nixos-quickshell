@@ -47,7 +47,7 @@ PopupWindow {
     anchor.rect.y: anchorWindow ? anchorWindow.implicitHeight + yOffset : 48
     
     implicitWidth: popupWidth
-    implicitHeight: autoHeight ? Math.min(maxHeight, contentLoader.implicitHeight + 20) : popupHeight
+    implicitHeight: autoHeight ? Math.min(maxHeight, contentLoader.item ? contentLoader.item.implicitHeight + 20 : 100) : popupHeight
     
     visible: showing && anchorWindow !== null
     color: "transparent"
@@ -91,7 +91,9 @@ PopupWindow {
                 
                 Loader {
                     id: contentLoader
-                    anchors.fill: parent
+                    anchors.fill: autoHeight ? undefined : parent
+                    width: parent.width
+                    height: autoHeight ? undefined : parent.height
                 }
             }
         }

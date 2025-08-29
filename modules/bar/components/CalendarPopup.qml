@@ -140,10 +140,6 @@ Scope {
                                     color: calendar.isToday(index) ? Appearance.m3colors.primary : 
                                            (dayMouseArea.containsMouse && calendar.isCurrentMonth(index) ? Appearance.m3colors.surface_container_highest : "transparent")
                                     
-                                    Behavior on color {
-                                        ColorAnimation { duration: 150 }
-                                    }
-                                    
                                     MouseArea {
                                         id: dayMouseArea
                                         anchors.fill: parent
@@ -178,10 +174,6 @@ Scope {
                         height: 36
                         radius: 18
                         color: todayMouseArea.containsMouse ? Appearance.m3colors.primary : Appearance.m3colors.surface_container_high
-                        
-                        Behavior on color {
-                            ColorAnimation { duration: 150 }
-                        }
                         
                         MouseArea {
                             id: todayMouseArea

@@ -98,10 +98,6 @@ PopupBox {
                             anchors.fill: parent
                             radius: 6
                             color: mouseArea.containsMouse ? Appearance.m3colors.surface_container_highest : "transparent"
-                            
-                            Behavior on color {
-                                ColorAnimation { duration: 150 }
-                            }
                         }
                         
                         Image {

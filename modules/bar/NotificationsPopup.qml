@@ -87,10 +87,6 @@ Scope {
                             border.width: 1
                             border.color: Appearance.m3colors.error
                             
-                            Behavior on color {
-                                ColorAnimation { duration: 150 }
-                            }
-                            
                             Text {
                                 id: clearText
                                 anchors.centerIn: parent
@@ -150,10 +146,6 @@ Scope {
                             color: notificationMouseArea.containsMouse ? 
                                    Appearance.m3colors.surface_container_highest : 
                                    Appearance.m3colors.surface_container
-                            
-                            Behavior on color {
-                                ColorAnimation { duration: 150 }
-                            }
                             
                             MouseArea {
                                 id: notificationMouseArea
@@ -264,10 +256,6 @@ Scope {
                                            Appearance.m3colors.error : 
                                            Appearance.m3colors.on_surface_variant
                                     opacity: parent.containsMouse ? 1.0 : 0.5
-                                    
-                                    Behavior on color {
-                                        ColorAnimation { duration: 150 }
-                                    }
                                 }
                             }
                         }

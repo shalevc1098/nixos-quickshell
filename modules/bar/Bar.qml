@@ -227,7 +227,7 @@ Item {
             visible: SystemTray.items.values.length > 0
             content: Component {
               Text {
-                text: "󰅂"  // Chevron left icon
+                text: trayExpandPopup.showing ? "󰅃" : "󰅀"  // Chevron down when open, up when closed (Windows 11 style)
                 font.family: "SF Pro Display, JetBrainsMono Nerd Font Propo"
                 font.pixelSize: 14
                 color: Appearance.m3colors.on_surface

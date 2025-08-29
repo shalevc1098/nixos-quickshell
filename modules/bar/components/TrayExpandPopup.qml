@@ -32,7 +32,7 @@ PopupBox {
     property int cellSize: 28  // Compact cell size
     property int gridPadding: 6
     property int gridSpacing: 2  // Small gap like main tray
-    property int columns: 4
+    property int columns: Math.min(4, SystemTray.items.values.length)  // Use actual count if less than 4
     
     popupWidth: columns * cellSize + (columns - 1) * gridSpacing + gridPadding * 2
     popupHeight: Math.ceil(SystemTray.items.values.length / columns) * cellSize + 

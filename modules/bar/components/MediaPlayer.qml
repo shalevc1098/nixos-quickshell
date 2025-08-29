@@ -68,7 +68,7 @@ Item {
                 implicitSize: 24
                 colPrimary: Appearance.m3colors.primary
                 colSecondary: Appearance.m3colors.surface_container_high
-                enableAnimation: false  // Disable animation for smooth progress
+                enableAnimation: true  // Disable animation for smooth progress
                 fill: false  // No filled background, just the line
             }
             

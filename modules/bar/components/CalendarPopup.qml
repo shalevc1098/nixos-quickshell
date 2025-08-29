@@ -27,18 +27,20 @@ Scope {
     PopupBox {
         id: popupBox
         
-        popupWidth: 320
-        popupHeight: 360
+        popupWidth: 340
+        popupHeight: 380
         xOffset: 0
-        autoHeight: false
+        autoHeight: true
         
         content: Component {
             Item {
-                anchors.fill: parent
+                implicitWidth: popupBox.popupWidth
+                implicitHeight: mainColumn.implicitHeight + 20
                 
                 Column {
-                    anchors.fill: parent
-                    anchors.margins: 16
+                    id: mainColumn
+                    anchors.centerIn: parent
+                    width: parent.width - 20
                     spacing: 12
                     
                     // Header with month/year and navigation
@@ -53,12 +55,13 @@ Scope {
                             MouseArea {
                                 width: 24
                                 height: 24
+                                hoverEnabled: true
                                 cursorShape: Qt.PointingHandCursor
                                 onClicked: calendar.previousMonth()
                                 
                                 Text {
                                     anchors.centerIn: parent
-                                    text: "󰅀"  // Chevron left
+                                    text: "󰅁"  // Chevron right rotated to point left
                                     font.family: "SF Pro Display, JetBrainsMono Nerd Font Propo"
                                     font.pixelSize: 16
                                     color: parent.containsMouse ? Appearance.m3colors.primary : Appearance.m3colors.on_surface
@@ -77,6 +80,7 @@ Scope {
                             MouseArea {
                                 width: 24
                                 height: 24
+                                hoverEnabled: true
                                 cursorShape: Qt.PointingHandCursor
                                 onClicked: calendar.nextMonth()
                                 
@@ -85,6 +89,7 @@ Scope {
                                     text: "󰅁"  // Chevron right
                                     font.family: "SF Pro Display, JetBrainsMono Nerd Font Propo"
                                     font.pixelSize: 16
+                                    rotation: 180
                                     color: parent.containsMouse ? Appearance.m3colors.primary : Appearance.m3colors.on_surface
                                 }
                             }
@@ -133,7 +138,7 @@ Scope {
                                     height: 32
                                     radius: 16
                                     color: calendar.isToday(index) ? Appearance.m3colors.primary : 
-                                           (dayMouseArea.containsMouse ? Appearance.m3colors.surface_container_highest : "transparent")
+                                           (dayMouseArea.containsMouse && calendar.isCurrentMonth(index) ? Appearance.m3colors.surface_container_highest : "transparent")
                                     
                                     Behavior on color {
                                         ColorAnimation { duration: 150 }
@@ -143,26 +148,24 @@ Scope {
                                         id: dayMouseArea
                                         anchors.fill: parent
                                         hoverEnabled: true
-                                        cursorShape: calendar.getDayNumber(index) > 0 ? Qt.PointingHandCursor : Qt.ArrowCursor
+                                        cursorShape: calendar.isCurrentMonth(index) ? Qt.PointingHandCursor : Qt.ArrowCursor
                                         
                                         onClicked: {
-                                            const day = calendar.getDayNumber(index)
-                                            if (day > 0) {
-                                                console.log("Selected date:", calendar.year, calendar.month, day)
+                                            if (calendar.isCurrentMonth(index)) {
+                                                const day = calendar.getDayNumber(index)
+                                                console.log("Selected date:", calendar.year, calendar.month + 1, day)
                                             }
                                         }
                                     }
                                     
                                     Text {
                                         anchors.centerIn: parent
-                                        text: {
-                                            const day = calendar.getDayNumber(index)
-                                            return day > 0 ? day.toString() : ""
-                                        }
+                                        text: calendar.getDayNumber(index).toString()
                                         font.family: "SF Pro Display"
                                         font.pixelSize: 14
                                         color: calendar.isToday(index) ? Appearance.m3colors.on_primary : 
                                                (calendar.isCurrentMonth(index) ? Appearance.m3colors.on_surface : Appearance.m3colors.on_surface_variant)
+                                        opacity: calendar.isCurrentMonth(index) ? 1.0 : 0.5
                                     }
                                 }
                             }
@@ -227,13 +230,13 @@ Scope {
                     function getDayNumber(index) {
                         if (index < firstDayOfWeek) {
                             // Previous month days
-                            return -(daysInPrevMonth - firstDayOfWeek + index + 1)
+                            return daysInPrevMonth - firstDayOfWeek + index + 1
                         } else if (index < firstDayOfWeek + daysInMonth) {
                             // Current month days
                             return index - firstDayOfWeek + 1
                         } else {
                             // Next month days
-                            return -(index - firstDayOfWeek - daysInMonth + 1)
+                            return index - firstDayOfWeek - daysInMonth + 1
                         }
                     }
                     
@@ -243,7 +246,7 @@ Scope {
                     
                     function isToday(index) {
                         const day = getDayNumber(index)
-                        return day > 0 && day === today && month === todayMonth && year === todayYear
+                        return isCurrentMonth(index) && day === today && month === todayMonth && year === todayYear
                     }
                     
                     function previousMonth() {

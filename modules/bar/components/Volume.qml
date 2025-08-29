@@ -11,6 +11,7 @@ Item {
     
     property int volume: 0
     property bool isMuted: false
+    property bool scrollProcessing: false  // Prevent overlapping scroll commands
     
     Timer {
         interval: 1000  // Update every second
@@ -55,11 +56,25 @@ Item {
     
     // Functions to be called from Bubble
     function openSettings() {
-        pavucontrolProcess.running = true
+        easyeffectsProcess.running = true
     }
     
     function toggleMute() {
         toggleMuteProcess.running = true
+    }
+    
+    function increaseVolume() {
+        if (scrollProcessing) return
+        scrollProcessing = true
+        setVolumeProcess.command = ["wpctl", "set-volume", "-l", "1.0", "@DEFAULT_AUDIO_SINK@", "5%+"]
+        setVolumeProcess.running = true
+    }
+    
+    function decreaseVolume() {
+        if (scrollProcessing) return
+        scrollProcessing = true
+        setVolumeProcess.command = ["wpctl", "set-volume", "@DEFAULT_AUDIO_SINK@", "5%-"]
+        setVolumeProcess.running = true
     }
     
     Row {
@@ -112,9 +127,31 @@ Item {
         }
     }
     
+    MouseArea {
+        anchors.fill: parent
+        acceptedButtons: Qt.NoButton  // Only handle wheel events
+        propagateComposedEvents: true  // Allow clicks to pass through
+        cursorShape: Qt.PointingHandCursor  // Show pointer to indicate clickability
+        
+        onWheel: (wheel) => {
+            wheel.accepted = true
+            
+            // Use vertical scroll delta and ensure proper direction
+            const delta = wheel.angleDelta.y
+            
+            if (delta > 0) {
+                // Scroll up - increase volume
+                increaseVolume()
+            } else if (delta < 0) {
+                // Scroll down - decrease volume
+                decreaseVolume()
+            }
+        }
+    }
+    
     Process {
-        id: pavucontrolProcess
-        command: ["pavucontrol"]
+        id: easyeffectsProcess
+        command: ["easyeffects"]
     }
     
     Process {
@@ -130,23 +167,12 @@ Item {
     }
     
     Process {
-        id: increaseVolumeProcess
-        command: ["wpctl", "set-volume", "-l", "1.0", "@DEFAULT_AUDIO_SINK@", "5%+"]
+        id: setVolumeProcess
         
         onRunningChanged: {
             if (!running) {
                 getVolumeProcess.running = true
-            }
-        }
-    }
-    
-    Process {
-        id: decreaseVolumeProcess
-        command: ["wpctl", "set-volume", "@DEFAULT_AUDIO_SINK@", "5%-"]
-        
-        onRunningChanged: {
-            if (!running) {
-                getVolumeProcess.running = true
+                scrollProcessing = false  // Reset flag when command completes
             }
         }
     }

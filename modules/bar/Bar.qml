@@ -75,8 +75,12 @@ Item {
           
           // Clock
           Bubble {
+            id: clockBubble
             content: Component {
               Clock {}
+            }
+            onClicked: function() {
+              calendarPopup.showing = !calendarPopup.showing
             }
           }
           
@@ -282,6 +286,14 @@ Item {
       id: trayExpandPopup
       anchorWindow: barWindow
       anchorItem: trayExpandBubble
+      showing: false
+    }
+    
+    // Calendar Popup
+    CalendarPopup {
+      id: calendarPopup
+      anchorWindow: barWindow
+      anchorItem: clockBubble
       showing: false
     }
   }

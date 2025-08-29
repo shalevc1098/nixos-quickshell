@@ -159,7 +159,9 @@ Item {
                 
                 MouseArea {
                     id: mouseArea
-                    anchors.fill: parent
+                    anchors.centerIn: parent
+                    width: parent.width + 12  // Expand click area by 6px on each side
+                    height: parent.height + 12  // Expand click area by 6px on each side
                     hoverEnabled: true
                     cursorShape: Qt.PointingHandCursor
                     acceptedButtons: Qt.LeftButton | Qt.RightButton | Qt.MiddleButton

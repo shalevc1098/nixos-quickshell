@@ -234,7 +234,7 @@ Item {
               }
             }
             onClicked: function() {
-              trayExpandPopup.visible = !trayExpandPopup.visible
+              trayExpandPopup.showing = !trayExpandPopup.showing
             }
           }
           
@@ -280,8 +280,9 @@ Item {
     // Tray Expand Popup
     TrayExpandPopup {
       id: trayExpandPopup
-      barWindow: barWindow
-      sourceBubble: trayExpandBubble
+      anchorWindow: barWindow
+      anchorItem: trayExpandBubble
+      showing: false
     }
   }
   } // End of Variants

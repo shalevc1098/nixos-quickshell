@@ -13,7 +13,7 @@ PopupBox {
     
     popupWidth: 200
     popupHeight: 80
-    xOffset: 10  // Slight offset to the right as before
+    xOffset: 0  // No offset - center under bell
     
     content: Component {
         Item {

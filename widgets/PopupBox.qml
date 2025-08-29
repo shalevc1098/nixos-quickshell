@@ -17,7 +17,7 @@ PopupWindow {
     property int maxHeight: 500
     property int cornerRadius: 12
     property int xOffset: 0  // Additional x offset for fine-tuning position
-    property int yOffset: 5  // Gap between anchor and popup
+    property int yOffset: 0  // Gap between anchor and popup
     property bool autoHeight: false  // If true, height adjusts to content
     
     // Content loader
@@ -26,12 +26,23 @@ PopupWindow {
     // Calculate anchor position
     anchor.window: anchorWindow
     anchor.rect.x: {
-        if (!anchorItem || !anchorItem.parent) return 100
-        // Get the absolute position of the anchor item
-        var parent = anchorItem.parent
-        var itemX = parent.x + anchorItem.x
-        var itemCenterX = itemX + anchorItem.width / 2
-        return itemCenterX - popupBox.implicitWidth / 2 + xOffset
+        if (!anchorItem || !anchorWindow) return 100
+        
+        // Try to find the absolute position by walking up the parent chain
+        let totalX = 0
+        let current = anchorItem
+        
+        while (current && current !== anchorWindow) {
+            totalX += current.x || 0
+            current = current.parent
+        }
+        
+        // Calculate center position
+        const centerX = totalX + anchorItem.width / 2
+        const popupHalfWidth = popupBox.implicitWidth / 2
+        const finalX = centerX - popupHalfWidth + xOffset
+        
+        return finalX
     }
     anchor.rect.y: anchorWindow ? anchorWindow.implicitHeight + yOffset : 48
     

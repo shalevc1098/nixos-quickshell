@@ -220,6 +220,24 @@ Item {
             }
           }
           
+          // Tray expand arrow bubble
+          Bubble {
+            id: trayExpandBubble
+            horizontalPadding: 8
+            visible: SystemTray.items.values.length > 0
+            content: Component {
+              Text {
+                text: "󰅂"  // Chevron left icon
+                font.family: "SF Pro Display, JetBrainsMono Nerd Font Propo"
+                font.pixelSize: 14
+                color: Appearance.m3colors.on_surface
+              }
+            }
+            onClicked: function() {
+              trayExpandPopup.visible = !trayExpandPopup.visible
+            }
+          }
+          
           // System tray bubble
           Bubble {
             horizontalPadding: 12
@@ -257,6 +275,13 @@ Item {
     // Media Controls Popup
     MediaControlsPopup {
       id: mediaControlsPopup
+    }
+    
+    // Tray Expand Popup
+    TrayExpandPopup {
+      id: trayExpandPopup
+      barWindow: barWindow
+      sourceBubble: trayExpandBubble
     }
   }
   } // End of Variants

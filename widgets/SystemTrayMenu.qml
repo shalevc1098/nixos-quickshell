@@ -252,11 +252,6 @@ PanelWindow {
                             root.visible = false
                         }
                     }
-                    
-                        // Hover animation
-                        Behavior on color {
-                            ColorAnimation { duration: 150 }
-                        }
                     }  // Rectangle
                 }  // sourceComponent
             }  // Loader delegate

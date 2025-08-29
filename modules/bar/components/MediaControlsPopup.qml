@@ -432,9 +432,6 @@ Scope {
                                        Qt.rgba(playerController.blendedColors.primary.r, playerController.blendedColors.primary.g, playerController.blendedColors.primary.b, 0.2) : 
                                        "transparent"
                                 
-                                Behavior on color {
-                                    ColorAnimation { duration: 150 }
-                                }
                             }
                             
                             Text {
@@ -509,9 +506,6 @@ Scope {
                                        Qt.rgba(playerController.blendedColors.primary.r, playerController.blendedColors.primary.g, playerController.blendedColors.primary.b, 0.2) : 
                                        "transparent"
                                 
-                                Behavior on color {
-                                    ColorAnimation { duration: 150 }
-                                }
                             }
                             
                             Text {
@@ -554,18 +548,12 @@ Scope {
                                 NumberAnimation { duration: 200; easing.type: Easing.OutCubic }
                             }
                             
-                            Behavior on color {
-                                ColorAnimation { duration: 200 }
-                            }
                             
                             Rectangle {
                                 anchors.fill: parent
                                 radius: parent.radius
                                 color: playMouseArea.containsMouse ? Qt.rgba(0, 0, 0, 0.1) : "transparent"
                                 
-                                Behavior on color {
-                                    ColorAnimation { duration: 150 }
-                                }
                             }
                         }
                         

@@ -8,21 +8,12 @@ ToolTip {
     delay: 500
     timeout: 5000
     
-    // Dynamic width with maximum constraint
-    property int maxWidth: 300
-    
-    // Calculate implicit width based on content
-    implicitWidth: Math.min(maxWidth, Math.ceil(contentItem.contentWidth) + leftPadding + rightPadding)
-    implicitHeight: contentItem.contentHeight + topPadding + bottomPadding
-    
     // Material Design styling
     contentItem: Text {
         text: root.text
         font.family: "SF Pro Display, JetBrainsMono Nerd Font Propo"
         font.pixelSize: 12
         color: Appearance.m3colors.on_surface
-        width: Math.min(root.maxWidth - root.leftPadding - root.rightPadding, contentWidth)
-        wrapMode: Text.Wrap
     }
     
     background: Rectangle {

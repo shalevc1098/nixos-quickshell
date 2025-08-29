@@ -24,6 +24,40 @@ Scope {
             popupBox.showing = !popupBox.showing
         }
     }
+    
+    // Debug shortcut to test menu display for first tray item
+    GlobalShortcut {
+        appid: "quickshell"
+        name: "trayMenuTest"
+        description: "Test tray menu display"
+        
+        onPressed: {
+            console.log("Testing tray menu display...")
+            if (SystemTray.items.values.length > 0) {
+                const firstItem = SystemTray.items.values[0]
+                console.log("First tray item:", firstItem.id, "hasMenu:", firstItem.hasMenu)
+                
+                if (firstItem.hasMenu) {
+                    // Try different position values
+                    console.log("anchorWindow:", popupBox.anchorWindow)
+                    console.log("popupBox:", popupBox)
+                    console.log("popupBox visible:", popupBox.visible)
+                    
+                    // Test with different coordinates and windows
+                    console.log("Testing display with popupBox at 100, 100")
+                    firstItem.display(popupBox, 100, 100)
+                    
+                    // Also try with anchorWindow after a delay
+                    Qt.callLater(() => {
+                        console.log("Testing display with anchorWindow at 200, 200")
+                        firstItem.display(popupBox.anchorWindow, 200, 200)
+                    })
+                }
+            } else {
+                console.log("No tray items available")
+            }
+        }
+    }
 
 PopupBox {
     id: popupBox
@@ -86,16 +120,51 @@ PopupBox {
                             anchors.fill: parent
                             hoverEnabled: true
                             cursorShape: Qt.PointingHandCursor
-                            acceptedButtons: Qt.LeftButton | Qt.RightButton
+                            acceptedButtons: Qt.LeftButton | Qt.RightButton | Qt.MiddleButton
                             
                             onClicked: (mouse) => {
-                                if (mouse.button === Qt.LeftButton) {
-                                    modelData.activate()
-                                    popupBox.showing = false
-                                } else if (mouse.button === Qt.RightButton) {
-                                    if (modelData.hasMenu) {
-                                        modelData.openMenu()
+                                console.log("=== Tray item clicked ===")
+                                console.log("Item:", modelData.id, "hasMenu:", modelData.hasMenu)
+                                
+                                // The popup is positioned relative to the bar window
+                                // We need to calculate: popup position + item position within popup + mouse position
+                                
+                                // Get popup position relative to bar window
+                                const popupX = popupBox.anchor.rect.x || 0
+                                const popupY = popupBox.anchor.rect.y || 0
+                                
+                                // Calculate item position within the popup
+                                let itemX = mouse.x
+                                let itemY = mouse.y
+                                let current = mouseArea
+                                
+                                // Walk up to the popup content root
+                                while (current && current.parent && current.parent !== popupBox) {
+                                    itemX += current.x || 0
+                                    itemY += current.y || 0
+                                    current = current.parent
+                                }
+                                
+                                // Final position relative to bar window
+                                const finalX = popupX + itemX
+                                const finalY = popupY + itemY
+                                
+                                console.log("Popup position:", popupX, popupY)
+                                console.log("Item position within popup:", itemX, itemY)
+                                console.log("Final position:", finalX, finalY)
+                                
+                                if (mouse.button === Qt.RightButton && modelData.hasMenu) {
+                                    console.log("Displaying menu at:", finalX, finalY)
+                                    modelData.display(popupBox.anchorWindow, finalX, finalY)
+                                } else if (mouse.button === Qt.LeftButton) {
+                                    if (modelData.onlyMenu && modelData.hasMenu) {
+                                        modelData.display(popupBox.anchorWindow, finalX, finalY)
+                                    } else {
+                                        modelData.activate()
+                                        popupBox.showing = false
                                     }
+                                } else if (mouse.button === Qt.MiddleButton) {
+                                    modelData.secondaryActivate()
                                 }
                             }
                         }

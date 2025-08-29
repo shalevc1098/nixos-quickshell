@@ -109,6 +109,9 @@ Item {
                 onOpenPopup: mediaControlsPopup.mediaControlsOpen = !mediaControlsPopup.mediaControlsOpen
               }
             }
+            onClicked: function() {
+              mediaControlsPopup.mediaControlsOpen = !mediaControlsPopup.mediaControlsOpen
+            }
           }
           
           // Workspaces bubble
@@ -269,8 +272,8 @@ Item {
       }
     }
     
-    // Simple Hello World Popup
-    SimplePopup {
+    // Notifications History Popup
+    NotificationsPopup {
       id: notificationHistory
       barWindow: barWindow
       bellBubble: bellBubble

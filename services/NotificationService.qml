@@ -8,9 +8,11 @@ import Quickshell.Services.Notifications
 Singleton {
     id: root
     
-    property var notifications: []
+    property var notifications: []  // Current notifications (auto-hide)
+    property var notificationHistory: []  // Persistent history for popup
     property int defaultTimeout: 5000
     property bool muted: false
+    property int maxHistorySize: 50  // Maximum number of notifications to keep in history
     
     signal notificationAdded(var notification)
     signal notificationRemoved(int id)
@@ -66,8 +68,18 @@ Singleton {
             console.log(`Replacing notification: "${notificationData.title}"`)
         }
         
+        // Add to current notifications (for auto-hide)
         notifications = [notificationData, ...notifications]
-        console.log(`Notification added: "${notificationData.title}" - Total: ${notifications.length}`)
+        
+        // Add to history (persistent)
+        notificationHistory = [notificationData, ...notificationHistory]
+        
+        // Limit history size
+        if (notificationHistory.length > maxHistorySize) {
+            notificationHistory = notificationHistory.slice(0, maxHistorySize)
+        }
+        
+        console.log(`Notification added: "${notificationData.title}" - Current: ${notifications.length}, History: ${notificationHistory.length}`)
         notificationAdded(notificationData)
         
         // Don't set tracked - this prevents the notification server from receiving updates
@@ -124,6 +136,20 @@ Singleton {
             }
             notificationRemoved(id)
         })
+    }
+    
+    // History management functions
+    function clearHistory() {
+        notificationHistory = []
+        console.log("Notification history cleared")
+    }
+    
+    function removeFromHistory(index) {
+        if (index >= 0 && index < notificationHistory.length) {
+            const removed = notificationHistory[index]
+            notificationHistory = notificationHistory.filter((n, i) => i !== index)
+            console.log(`Removed from history: "${removed.title}" - History size: ${notificationHistory.length}`)
+        }
     }
     
     NotificationServer {

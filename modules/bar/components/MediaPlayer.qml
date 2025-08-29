@@ -30,14 +30,13 @@ Item {
         }
     }
     
-    // Mouse interaction for entire widget
+    // Mouse interaction for media controls (no left click - let Bubble handle that)
     MouseArea {
         anchors.fill: parent
-        acceptedButtons: Qt.MiddleButton | Qt.BackButton | Qt.ForwardButton | Qt.RightButton | Qt.LeftButton
+        acceptedButtons: Qt.MiddleButton | Qt.BackButton | Qt.ForwardButton | Qt.RightButton
+        cursorShape: Qt.PointingHandCursor  // Add pointer cursor to entire area
         onPressed: (event) => {
-            if (event.button === Qt.LeftButton) {
-                root.openPopup()
-            } else if (event.button === Qt.MiddleButton) {
+            if (event.button === Qt.MiddleButton) {
                 MprisService.togglePlaying()
             } else if (event.button === Qt.BackButton) {
                 MprisService.previous()
@@ -148,16 +147,16 @@ Item {
         }
     }
     
-    // Tooltip with full track info and time (only when media is playing)
-    StyledTooltip {
-        visible: parent.parent && parent.parent.isHovered && MprisService.hasActivePlayer
-        text: {
-            let info = MprisService.trackTitle || "Unknown"
-            if (MprisService.trackArtist) info += `\n${MprisService.trackArtist}`
-            if (MprisService.trackAlbum) info += `\nAlbum: ${MprisService.trackAlbum}`
-            info += `\n${MprisService.positionText} / ${MprisService.lengthText}`
-            return info
-        }
-        delay: 500
-    }
+    // // Tooltip with full track info and time (only when media is playing)
+    // StyledTooltip {
+    //     visible: parent.parent && parent.parent.isHovered && MprisService.hasActivePlayer
+    //     text: {
+    //         let info = MprisService.trackTitle || "Unknown"
+    //         if (MprisService.trackArtist) info += `\n${MprisService.trackArtist}`
+    //         if (MprisService.trackAlbum) info += `\nAlbum: ${MprisService.trackAlbum}`
+    //         info += `\n${MprisService.positionText} / ${MprisService.lengthText}`
+    //         return info
+    //     }
+    //     delay: 500
+    // }
 }

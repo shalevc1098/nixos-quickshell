@@ -149,7 +149,6 @@ Scope {
                                         onClicked: {
                                             if (calendar.isCurrentMonth(index)) {
                                                 const day = calendar.getDayNumber(index)
-                                                console.log("Selected date:", calendar.year, calendar.month + 1, day)
                                             }
                                         }
                                     }

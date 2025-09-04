@@ -6,6 +6,7 @@ import QtQuick.Controls
 import Quickshell
 import Quickshell.Hyprland
 import Quickshell.Services.SystemTray
+import Quickshell.DBusMenu
 
 Scope {
     id: trayExpandScope
@@ -13,6 +14,70 @@ Scope {
     property alias anchorWindow: popupBox.anchorWindow
     property alias anchorItem: popupBox.anchorItem
     property alias showing: popupBox.showing
+    
+    // Custom menu component (using Scope and Loader like SystemTray)
+    property bool menuOpen: false
+    property var menuSourceRect: ({ x: 0, y: 0, width: 0, height: 0 })
+    property var currentMenuOpener: null
+    
+    Scope {
+        id: menuScope
+        
+        Loader {
+            id: menuLoader
+            active: trayExpandScope.menuOpen
+            
+            sourceComponent: SystemTrayMenu {
+                id: customMenu
+                menuOpener: trayExpandScope.currentMenuOpener
+                sourceRect: trayExpandScope.menuSourceRect
+                
+                Component.onCompleted: {
+                    visible = true
+                }
+                
+                onVisibleChanged: {
+                    if (!visible) {
+                        trayExpandScope.menuOpen = false
+                        trayExpandScope.currentMenuOpener = null
+                    }
+                }
+            }
+        }
+    }
+    
+    // Function to show custom menu at specific position (same as SystemTray)
+    function showCustomMenu(trayItem, mouseArea, menuOpener, anchorWindow) {
+        if (!trayItem) {
+            return false
+        }
+        
+        try {
+            if (!menuOpener || !menuOpener.children) {
+                return false
+            }
+            
+            // Store the menu opener so our menu component can access it
+            trayExpandScope.currentMenuOpener = menuOpener
+            
+            // Calculate position relative to the anchor window
+            const mapped = anchorWindow.mapFromItem(mouseArea, 0, 0)
+            const rect = {
+                x: mapped.x,
+                y: mapped.y,
+                width: mouseArea.width,
+                height: mouseArea.height
+            }
+            
+            // Set properties and open menu
+            trayExpandScope.menuSourceRect = rect
+            trayExpandScope.menuOpen = true
+            
+            return true
+        } catch (e) {
+            return false
+        }
+    }
     
     // Debug shortcut for testing the tray popup (remove this in production)
     GlobalShortcut {
@@ -32,29 +97,21 @@ Scope {
         description: "Test tray menu display"
         
         onPressed: {
-            console.log("Testing tray menu display...")
             if (SystemTray.items.values.length > 0) {
                 const firstItem = SystemTray.items.values[0]
-                console.log("First tray item:", firstItem.id, "hasMenu:", firstItem.hasMenu)
                 
                 if (firstItem.hasMenu) {
                     // Try different position values
-                    console.log("anchorWindow:", popupBox.anchorWindow)
-                    console.log("popupBox:", popupBox)
-                    console.log("popupBox visible:", popupBox.visible)
                     
                     // Test with different coordinates and windows
-                    console.log("Testing display with popupBox at 100, 100")
                     firstItem.display(popupBox, 100, 100)
                     
                     // Also try with anchorWindow after a delay
                     Qt.callLater(() => {
-                        console.log("Testing display with anchorWindow at 200, 200")
                         firstItem.display(popupBox.anchorWindow, 200, 200)
                     })
                 }
             } else {
-                console.log("No tray items available")
             }
         }
     }
@@ -94,6 +151,43 @@ PopupBox {
                         width: popupBox.cellSize
                         height: popupBox.cellSize
                         
+                        // Menu anchor for context menus (fallback)
+                        QsMenuAnchor {
+                            id: menuAnchor
+                            menu: modelData.menu
+                            anchor.window: popupBox.anchorWindow
+                            
+                            function updatePosition() {
+                                if (!popupBox.anchorWindow) return
+                                
+                                try {
+                                    const mapped = popupBox.anchorWindow.mapFromItem(mouseArea, mouseArea.width / 2, 0)
+                                    if (mapped) {
+                                        anchor.rect.x = mapped.x
+                                        anchor.rect.y = 50 - 2  // Position slightly overlapping the bar
+                                    }
+                                } catch (e) {
+                                    // Fallback: estimate position
+                                    let accumulatedX = 0
+                                    let current = mouseArea
+                                    
+                                    while (current && current !== popupBox.anchorWindow) {
+                                        accumulatedX += current.x
+                                        current = current.parent
+                                    }
+                                    
+                                    anchor.rect.x = accumulatedX + mouseArea.width / 2
+                                    anchor.rect.y = 50 - 2  // Position slightly overlapping the bar
+                                }
+                            }
+                        }
+                        
+                        // QsMenuOpener to access menu children
+                        QsMenuOpener {
+                            id: menuOpener
+                            menu: modelData.menu
+                        }
+                        
                         Rectangle {
                             anchors.fill: parent
                             radius: 6
@@ -119,43 +213,29 @@ PopupBox {
                             acceptedButtons: Qt.LeftButton | Qt.RightButton | Qt.MiddleButton
                             
                             onClicked: (mouse) => {
-                                console.log("=== Tray item clicked ===")
-                                console.log("Item:", modelData.id, "hasMenu:", modelData.hasMenu)
-                                
-                                // The popup is positioned relative to the bar window
-                                // We need to calculate: popup position + item position within popup + mouse position
-                                
-                                // Get popup position relative to bar window
-                                const popupX = popupBox.anchor.rect.x || 0
-                                const popupY = popupBox.anchor.rect.y || 0
-                                
-                                // Calculate item position within the popup
-                                let itemX = mouse.x
-                                let itemY = mouse.y
-                                let current = mouseArea
-                                
-                                // Walk up to the popup content root
-                                while (current && current.parent && current.parent !== popupBox) {
-                                    itemX += current.x || 0
-                                    itemY += current.y || 0
-                                    current = current.parent
-                                }
-                                
-                                // Final position relative to bar window
-                                const finalX = popupX + itemX
-                                const finalY = popupY + itemY
-                                
-                                console.log("Popup position:", popupX, popupY)
-                                console.log("Item position within popup:", itemX, itemY)
-                                console.log("Final position:", finalX, finalY)
-                                
-                                if (mouse.button === Qt.RightButton && modelData.hasMenu) {
-                                    console.log("Displaying menu at:", finalX, finalY)
-                                    modelData.display(popupBox.anchorWindow, finalX, finalY)
+                                if (mouse.button === Qt.RightButton) {
+                                    // Right click - ALWAYS show our custom menu first
+                                    if (!trayExpandScope.showCustomMenu(modelData, mouseArea, menuOpener, popupBox.anchorWindow)) {
+                                        // Only fallback to default if the app actually has a menu
+                                        if (modelData.hasMenu) {
+                                            menuAnchor.updatePosition()
+                                            if (menuAnchor.anchor.window) {
+                                                menuAnchor.open()
+                                            }
+                                        }
+                                    }
                                 } else if (mouse.button === Qt.LeftButton) {
+                                    // Left click - activate the item or show menu
                                     if (modelData.onlyMenu && modelData.hasMenu) {
-                                        modelData.display(popupBox.anchorWindow, finalX, finalY)
+                                        // If only menu, try custom menu first, fallback to default
+                                        if (!trayExpandScope.showCustomMenu(modelData, mouseArea, menuOpener, popupBox.anchorWindow)) {
+                                            menuAnchor.updatePosition()
+                                            if (menuAnchor.anchor.window) {
+                                                menuAnchor.open()
+                                            }
+                                        }
                                     } else {
+                                        // Otherwise, activate the item
                                         modelData.activate()
                                         popupBox.showing = false
                                     }

@@ -21,7 +21,6 @@ Scope {
         
         onPressed: {
             popupBox.showing = !popupBox.showing
-            console.log("Notifications popup toggled, showing:", popupBox.showing)
         }
     }
     
@@ -155,7 +154,6 @@ Scope {
                                 
                                 onClicked: {
                                     // Could add action handling here if notifications have actions
-                                    console.log("Notification clicked:", modelData.summary)
                                 }
                             }
                             

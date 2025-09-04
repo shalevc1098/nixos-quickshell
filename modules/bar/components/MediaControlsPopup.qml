@@ -19,9 +19,7 @@ Scope {
         active: root.mediaControlsOpen
         
         onActiveChanged: {
-            console.log("MediaControlsPopup Loader active:", active)
             if (active) {
-                console.log("Opening media controls popup")
             }
         }
         
@@ -71,7 +69,6 @@ Scope {
                 Connections {
                     target: MprisService
                     function onActivePlayerChanged() {
-                        console.log("Active player changed to:", MprisService.activePlayer)
                         playerController.player = MprisService.activePlayer
                         if (playerController.player) {
                             playerController.currentPosition = playerController.player.position
@@ -156,7 +153,6 @@ Scope {
                 
                 // Download album art
                 onArtUrlChanged: {
-                    console.log("Art URL changed to:", artUrl)
                     if (artUrl.length === 0) {
                         artDominantColor = Appearance.m3colors.surface_container
                         artDownloaded = false
@@ -168,8 +164,6 @@ Scope {
                     var fileName = Qt.md5(artUrl) + ".jpg"
                     var filePath = "/tmp/quickshell-albumart-" + fileName
                     
-                    console.log("Starting art download for:", artUrl)
-                    console.log("Will save to:", filePath)
                     
                     // Reset state before download
                     artDownloaded = false
@@ -196,7 +190,6 @@ Scope {
                     
                     command: ["echo", "Not initialized"]
                     onExited: (exitCode, exitStatus) => {
-                        console.log("Art download exited with code:", exitCode, "Path:", downloadPath)
                         if (exitCode === 0 && downloadPath) {
                             playerController.currentArtPath = downloadPath
                             playerController.artDownloaded = true
@@ -214,7 +207,6 @@ Scope {
                     onColorsChanged: {
                         if (colors && colors.length > 0) {
                             playerController.artDominantColor = colors[0]
-                            console.log("Dominant color extracted:", colors[0])
                         }
                     }
                 }
@@ -448,7 +440,6 @@ Scope {
                                 hoverEnabled: true
                                 cursorShape: Qt.PointingHandCursor
                                 onClicked: {
-                                    console.log("Previous clicked, player:", playerController.player)
                                     if (playerController.player) {
                                         playerController.player.previous()
                                     }
@@ -522,7 +513,6 @@ Scope {
                                 hoverEnabled: true
                                 cursorShape: Qt.PointingHandCursor
                                 onClicked: {
-                                    console.log("Next clicked, player:", playerController.player)
                                     if (playerController.player) {
                                         playerController.player.next()
                                     }

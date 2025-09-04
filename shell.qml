@@ -33,7 +33,6 @@ ShellRoot {
         active: enableBar
         component: Bar {
             onPowerMenuRequested: {
-                console.log("Shell received powerMenuRequested signal")
                 powerMenu.show()
             }
         }

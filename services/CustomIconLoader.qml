@@ -116,14 +116,9 @@ Singleton {
 
     function logIconInfo(iconPath) {
         const parsed = parseCustomIconPath(iconPath)
-        console.log("Icon info for:", iconPath)
-        console.log("  - Icon name:", parsed.iconName)
-        console.log("  - Custom path:", parsed.customPath)
-        console.log("  - Is custom path:", parsed.isCustomPath)
         
         if (parsed.isCustomPath) {
             const resolved = resolveIconPath(parsed.iconName, parsed.customPath)
-            console.log("  - Resolved to:", resolved)
         }
     }
 }

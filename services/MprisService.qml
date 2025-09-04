@@ -88,7 +88,6 @@ Singleton {
     
     Component.onCompleted: {
         updateActivePlayer()
-        console.log("MprisService initialized, players:", Mpris.players.values.length)
         initialRefreshTimer.start()
     }
     

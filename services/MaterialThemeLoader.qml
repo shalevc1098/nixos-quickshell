@@ -28,9 +28,7 @@ Singleton {
                 }
             }
             
-            console.log("Theme applied successfully from:", root.filePath)
         } catch (error) {
-            console.error("Failed to parse theme file:", error)
         }
     }
     

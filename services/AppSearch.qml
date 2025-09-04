@@ -54,9 +54,7 @@ Singleton {
         entry: a
     }))
     
-    Component.onCompleted: {
-        console.log("AppSearch loaded", list.length, "applications")
-    }
+    
     
     function search(query) {
         if (!query || query.length === 0) return []
@@ -142,12 +140,10 @@ Singleton {
     
     // Function to launch an app by its ID
     function launchApp(appId, appExec) {
-        console.log("Launching app with id:", appId, "exec:", appExec)
         
         // Try to find the app by ID and launch it
         for (const app of applications) {
             if (app.id === appId) {
-                console.log("Found app, launching:", app.name)
                 app.launch()
                 GlobalStates.overviewOpen = false
                 return
@@ -156,7 +152,6 @@ Singleton {
         
         // Fallback: launch using exec command
         if (appExec) {
-            console.log("Fallback: launching with exec command:", appExec)
             const cleanExec = appExec.replace(/%[fFuUdDnNickvm]/g, '').trim()
             Quickshell.execDetached(["sh", "-c", cleanExec])
             GlobalStates.overviewOpen = false

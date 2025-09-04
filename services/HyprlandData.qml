@@ -50,7 +50,6 @@ Singleton {
         target: Hyprland
         
         function onRawEvent(event) {
-            // console.log("Hyprland raw event:", event.name)
             updateAll()
         }
     }

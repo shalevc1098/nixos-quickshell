@@ -15,7 +15,6 @@ Singleton {
     // })
     function attach(component, config = {}) {
         if (!component) {
-            console.warn("FractionalScalingFix: No component provided")
             return null
         }
         
@@ -36,9 +35,7 @@ Singleton {
                 property var fixConfig: ({})
                 
                 onTriggered: {
-                    console.log("FractionalScalingFix: Timer triggered")
                     if (!targetComponent) {
-                        console.warn("FractionalScalingFix: No target component")
                         return
                     }
                     
@@ -46,18 +43,15 @@ Singleton {
                     for (const prop in fixConfig) {
                         const config = fixConfig[prop]
                         if (config && config.to !== undefined) {
-                            console.log("FractionalScalingFix: Applying", prop, "=", config.to)
                             targetComponent[prop] = config.to
                         }
                     }
                     
                     // Schedule restore to "from" values
                     Qt.callLater(() => {
-                        console.log("FractionalScalingFix: Restoring to specified values")
                         for (const prop in fixConfig) {
                             const config = fixConfig[prop]
                             if (config && config.from !== undefined) {
-                                console.log("FractionalScalingFix: Restoring", prop, "=", config.from)
                                 targetComponent[prop] = config.from
                             }
                         }
@@ -80,13 +74,11 @@ Singleton {
                 if (signal) {
                     signal.connect(() => {
                         const currentValue = component[prop]
-                        console.log("FractionalScalingFix: Signal", prop, "changed to", currentValue)
                         
                         // Check if we should trigger
                         // null means any change, array means specific values
                         if (acceptedValues === null || 
                             (Array.isArray(acceptedValues) && acceptedValues.includes(currentValue))) {
-                            console.log("FractionalScalingFix: Triggering timer for", prop, "=", currentValue)
                             timer.restart()
                         }
                     })

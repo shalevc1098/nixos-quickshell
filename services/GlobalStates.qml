@@ -17,7 +17,6 @@ Singleton {
     // Toggle functions
     function toggleOverview() {
         overviewOpen = !overviewOpen
-        console.log("Overview toggled:", overviewOpen)
     }
     
     function closeAll() {

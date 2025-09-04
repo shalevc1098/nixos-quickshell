@@ -18,7 +18,6 @@ Singleton {
     function getScalingFactor(screenName, logicalWidth, logicalHeight) {
         const physical = physicalResolutions[screenName]
         if (!physical) {
-            console.log("No physical resolution found for", screenName)
             return 1.0
         }
         
@@ -28,7 +27,6 @@ Singleton {
         // Use the average of X and Y scaling (they should be the same)
         const scale = (scaleX + scaleY) / 2
         
-        console.log(`Screen ${screenName}: Physical ${physical.width}x${physical.height}, Logical ${logicalWidth}x${logicalHeight}, Scale ${scale.toFixed(2)}x`)
         
         return scale
     }
@@ -87,7 +85,6 @@ Singleton {
                 
                 if (Object.keys(newResolutions).length > 0) {
                     root.physicalResolutions = newResolutions
-                    console.log("Detected physical resolutions:", JSON.stringify(newResolutions))
                 }
             }
         }

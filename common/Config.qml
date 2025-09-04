@@ -63,4 +63,43 @@ Singleton {
     property QtObject hacks: QtObject {
         property int arbitraryRaceConditionDelay: 20 // milliseconds
     }
+    
+    // ====== Notification Configuration ======
+    property QtObject notifications: QtObject {
+        property int maxHistory: 100
+        property int defaultTimeout: 5000
+        property bool persistent: true  // Enable persistence for notification history
+        property bool showBadge: true
+        property bool muteOnStartup: false
+    }
+    
+    // ====== Bar Configuration ======
+    property QtObject bar: QtObject {
+        property int height: 48
+        property int paddingHorizontal: 12
+        property int paddingVertical: 8
+        property int bubbleSpacing: 8
+        property bool showSystemTray: true
+        property bool use24HourClock: true
+        property string dateFormat: "ddd, MMM d"
+        property string timeFormat: use24HourClock ? "HH:mm" : "h:mm AP"
+    }
+    
+    // ====== Popup Configuration ======
+    property QtObject popup: QtObject {
+        property int cornerRadius: 12
+        property int padding: 10
+        property int maxWidth: 400
+        property int animationDuration: 200
+        property bool enableAnimations: true
+    }
+    
+    // ====== System Paths (Dynamic) ======
+    property QtObject paths: QtObject {
+        readonly property string home: "/home/shalev"  // Using hardcoded path
+        readonly property string config: home + "/.config/quickshell"
+        readonly property string data: home + "/.local/share/quickshell"
+        readonly property string cache: home + "/.cache/quickshell"
+        readonly property string assets: config + "/assets"
+    }
 }

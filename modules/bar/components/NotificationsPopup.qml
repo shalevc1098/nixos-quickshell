@@ -1,17 +1,17 @@
 import qs.common
 import qs.services
-import qs.widgets
 import QtQuick
 import QtQuick.Controls
+import QtQuick.Effects
 import Quickshell
 import Quickshell.Hyprland
 
 Scope {
     id: notificationsPopupScope
     
-    property alias barWindow: popupBox.anchorWindow
-    property alias bellBubble: popupBox.anchorItem
-    property alias showing: popupBox.showing
+    property var barWindow: null
+    property var bellBubble: null
+    property bool showing: false
     
     // Debug shortcut to test notifications popup
     GlobalShortcut {
@@ -20,29 +20,88 @@ Scope {
         description: "Toggle notifications popup"
         
         onPressed: {
-            popupBox.showing = !popupBox.showing
+            notificationsPopupScope.showing = !notificationsPopupScope.showing
         }
     }
     
-    PopupBox {
-        id: popupBox
+    Loader {
+        id: notificationsLoader
+        active: notificationsPopupScope.showing
         
-        property var barWindow: null
-        property var bellBubble: null
-        
-        anchorWindow: barWindow
-        anchorItem: bellBubble
-        
-        popupWidth: 380
-        popupHeight: 500
-        maxHeight: 600
-        autoHeight: false
-        xOffset: 0  // Center under bell
-        
-        content: Component {
+        sourceComponent: PanelWindow {
+            id: notificationsWindow
+            visible: true
+            
+            exclusionMode: ExclusionMode.Ignore
+            exclusiveZone: 0
+            
+            // Make fullscreen to catch clicks outside
+            anchors {
+                top: true
+                bottom: true
+                left: true
+                right: true
+            }
+            color: "transparent"
+            
+            // Fullscreen MouseArea to catch clicks outside
+            MouseArea {
+                anchors.fill: parent
+                onClicked: {
+                    notificationsPopupScope.showing = false
+                }
+            }
+            
+            // Main notifications container - positioned under the bell
             Item {
-                id: contentRoot
-                implicitHeight: notificationsList.contentHeight + headerRow.height + 20
+                id: notificationsContainer
+                anchors.top: parent.top
+                anchors.topMargin: 60  // Bar height + gap
+                anchors.horizontalCenter: parent.horizontalCenter
+                anchors.horizontalCenterOffset: 150  // Offset to align with bell position
+                width: 380
+                height: Math.min(500, contentRoot.implicitHeight + 20)
+                
+                // MouseArea to prevent clicks on content from closing popup
+                MouseArea {
+                    anchors.fill: parent
+                    onClicked: {
+                        // Do nothing - just consume the click
+                    }
+                }
+                
+                // Shadow/elevation
+                Rectangle {
+                    anchors.fill: background
+                    anchors.margins: -2
+                    radius: 14
+                    color: "transparent"
+                    border.width: 0
+                    
+                    layer.enabled: true
+                    layer.effect: MultiEffect {
+                        shadowEnabled: true
+                        shadowBlur: 0.5
+                        shadowOpacity: 0.3
+                        shadowVerticalOffset: 2
+                    }
+                }
+                
+                // Main background
+                Rectangle {
+                    id: background
+                    anchors.fill: parent
+                    anchors.margins: 8
+                    radius: 12
+                    color: Appearance.m3colors.surface_container
+                    clip: true
+                    
+                    // Content
+                    Item {
+                        id: contentRoot
+                        anchors.fill: parent
+                        anchors.margins: 10
+                        implicitHeight: notificationsList.contentHeight + headerRow.height + 20
                 
                 // Header with title and clear button
                 Row {
@@ -507,7 +566,9 @@ Scope {
                         }
                     }
                 }
-            }
-        }
-    }
-}
+            } // End of contentRoot Item
+        } // End of background Rectangle
+    } // End of notificationsContainer Item
+        } // End of PanelWindow
+    } // End of Loader
+} // End of Scope

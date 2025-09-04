@@ -36,15 +36,16 @@ PanelWindow {
         }
     }
     
-    // Main menu container positioned at sourceRect with boundary checking
+    // Main menu container positioned at mouse cursor
     Item {
         property int menuX: {
-            // Center the menu on the source icon
-            let x = sourceRect.x - menuContainer.width / 2 + sourceRect.width / 2
+            // Position at mouse cursor
+            let x = sourceRect.x
             
             // Check if menu goes off the right edge
-            if (x + menuContainer.width > root.width) {
-                x = root.width - menuContainer.width - 10  // 10px margin from edge
+            if (x + menuContainer.width > root.width - 10) {
+                // Position menu to the left of cursor
+                x = Math.max(10, x - menuContainer.width)
             }
             
             // Check if menu goes off the left edge
@@ -56,12 +57,18 @@ PanelWindow {
         }
         
         property int menuY: {
-            // Try to position below the bar
-            let y = 50  // Bar height 48 + small gap 2
+            // Position at mouse cursor
+            let y = sourceRect.y
             
-            // If menu would go off bottom, position above the bar
+            // Check if menu goes off bottom
             if (y + menuContainer.height > root.height - 10) {
-                y = sourceRect.y - menuContainer.height - 2  // Position above with 2px gap
+                // Position menu above cursor
+                y = Math.max(10, y - menuContainer.height)
+            }
+            
+            // Check if menu goes off top
+            if (y < 10) {
+                y = 10
             }
             
             return y

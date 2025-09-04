@@ -123,55 +123,6 @@ Item {
               }
             }
           }
-          
-          
-          // Bell icon bubble (shows notification history) - moved after workspaces
-          Bubble {
-            id: bellBubble
-            content: Component {
-              Item {
-                implicitWidth: bellText.width
-                implicitHeight: bellText.height
-                
-                Text {
-                  id: bellText
-                  text: NotificationService.muted ? "󰂛" : (NotificationService.notifications.length > 0 ? "󰂚" : "󰂜")  // Bell icon changes based on muted state and notifications
-                  font.family: "SF Pro Display, JetBrainsMono Nerd Font Propo"
-                  font.pixelSize: 14
-                  // Change color based on muted state and hover
-                  color: NotificationService.muted ? Appearance.m3colors.on_surface : 
-                         (parent.parent && parent.parent.isHovered) ? Appearance.m3colors.primary : 
-                         Appearance.m3colors.on_surface_variant
-                  
-                  Behavior on color {
-                      ColorAnimation { duration: 150 }
-                  }
-                }
-                
-                // Notification count badge
-                Rectangle {
-                  visible: NotificationService.notifications.length > 0
-                  anchors.right: parent.right
-                  anchors.top: parent.top
-                  anchors.rightMargin: -4
-                  anchors.topMargin: -2
-                  width: 6
-                  height: 6
-                  radius: 3
-                  color: Appearance.m3colors.primary
-                }
-              }
-            }
-            onClicked: function(mouse) {
-              if (mouse && mouse.button === Qt.RightButton) {
-                // Right-click: toggle mute
-                NotificationService.toggleMute()
-              } else {
-                // Left-click: toggle notification history
-                notificationHistory.showing = !notificationHistory.showing
-              }
-            }
-          }
         }
         
         // Right section
@@ -252,6 +203,54 @@ Item {
             content: Component {
               SystemTray {
                 panelWindow: barWindow
+              }
+            }
+          }
+          
+          // Bell icon bubble (shows notification history) - moved before power button
+          Bubble {
+            id: bellBubble
+            content: Component {
+              Item {
+                implicitWidth: bellText.width
+                implicitHeight: bellText.height
+                
+                Text {
+                  id: bellText
+                  text: NotificationService.muted ? "󰂛" : (NotificationService.notifications.length > 0 ? "󰂚" : "󰂜")  // Bell icon changes based on muted state and notifications
+                  font.family: "SF Pro Display, JetBrainsMono Nerd Font Propo"
+                  font.pixelSize: 14
+                  // Change color based on muted state and hover
+                  color: NotificationService.muted ? Appearance.m3colors.on_surface : 
+                         (parent.parent && parent.parent.isHovered) ? Appearance.m3colors.primary : 
+                         Appearance.m3colors.on_surface_variant
+                  
+                  Behavior on color {
+                      ColorAnimation { duration: 150 }
+                  }
+                }
+                
+                // Notification count badge
+                Rectangle {
+                  visible: NotificationService.notifications.length > 0
+                  anchors.right: parent.right
+                  anchors.top: parent.top
+                  anchors.rightMargin: -4
+                  anchors.topMargin: -2
+                  width: 6
+                  height: 6
+                  radius: 3
+                  color: Appearance.m3colors.primary
+                }
+              }
+            }
+            onClicked: function(mouse) {
+              if (mouse && mouse.button === Qt.RightButton) {
+                // Right-click: toggle mute
+                NotificationService.toggleMute()
+              } else {
+                // Left-click: toggle notification history
+                notificationHistory.showing = !notificationHistory.showing
               }
             }
           }

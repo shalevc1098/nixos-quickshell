@@ -89,7 +89,7 @@ PanelWindow {
         
         Rectangle {
             id: menuContainer
-            width: Math.max(200, menuColumn.implicitWidth + 16)
+            width: Math.min(400, Math.max(200, menuColumn.implicitWidth + 32))  // Dynamic width with max limit
             height: Math.max(100, menuColumn.implicitHeight + 16)
             color: Appearance.m3colors.surface_container_high
             radius: 8
@@ -221,6 +221,9 @@ PanelWindow {
                             font.family: "SF Pro Display"
                             font.pixelSize: 13
                             color: modelData.enabled ? Appearance.m3colors.on_surface : Appearance.m3colors.on_surface_variant
+                            elide: Text.ElideRight
+                            maximumLineCount: 1
+                            width: menuColumn.width - parent.spacing - (modelData.icon ? 24 : 0) - 16  // Account for icon and padding
                         }
                     }
                     

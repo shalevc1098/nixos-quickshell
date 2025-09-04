@@ -35,11 +35,13 @@ Scope {
         content: Component {
             Item {
                 implicitWidth: popupBox.popupWidth
-                implicitHeight: mainColumn.implicitHeight + 20
+                implicitHeight: mainColumn.implicitHeight + 18
                 
                 Column {
                     id: mainColumn
-                    anchors.centerIn: parent
+                    anchors.horizontalCenter: parent.horizontalCenter
+                    anchors.top: parent.top
+                    anchors.topMargin: 0
                     width: parent.width - 20
                     spacing: 12
                     

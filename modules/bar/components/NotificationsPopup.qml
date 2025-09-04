@@ -35,7 +35,7 @@ Scope {
         popupWidth: 380
         popupHeight: 500
         autoHeight: true
-        maxHeight: 500
+        maxHeight: Math.floor(popupBox.anchorWindow ? popupBox.anchorWindow.screen.height * 0.9 : 500)
         xOffset: 0  // Center below the bell
         yOffset: 0  // Default gap
         
@@ -47,7 +47,38 @@ Scope {
                 Item {
                     id: contentRoot
                     anchors.fill: parent
-                    implicitHeight: notificationsList.contentHeight + headerRow.height + 20
+                    
+                    // Calculate total height needed for all content
+                    property real totalContentHeight: {
+                        let height = headerRow.height + separator.height + 35 // Header + separator + margins + bottom margin
+                        
+                        // Add height for each app group
+                        const groups = notificationsList.model
+                        if (groups && groups.length) {
+                            for (let i = 0; i < groups.length; i++) {
+                                const group = groups[i]
+                                if (group) {
+                                    // App group header height
+                                    const isExpanded = notificationsList.expandedApps[group.appName]
+                                    height += (group.count === 1 || !isExpanded) ? 60 : 40
+                                    
+                                    // If expanded, add individual notification heights
+                                    if (isExpanded && group.count > 1) {
+                                        height += group.count * 48 + (group.count - 1) * 4 // Each notification + spacing
+                                    }
+                                    
+                                    // Add spacing between groups
+                                    if (i < groups.length - 1) {
+                                        height += 8
+                                    }
+                                }
+                            }
+                        }
+                        
+                        return Math.max(height, 100) // Minimum height
+                    }
+                    
+                    implicitHeight: totalContentHeight
                     
                     // Header with title and clear button
                 Row {
@@ -123,8 +154,14 @@ Scope {
                     anchors.left: parent.left
                     anchors.right: parent.right
                     anchors.bottom: parent.bottom
+                    anchors.bottomMargin: 15
                     clip: true
                     spacing: 8
+                    
+                    // Disable scroll animations and bouncing for normal scrolling
+                    boundsBehavior: Flickable.StopAtBounds
+                    flickDeceleration: 5000
+                    maximumFlickVelocity: 2500
                     
                     property var expandedApps: ({})  // Track which app groups are expanded
                     
@@ -167,7 +204,7 @@ Scope {
                     
                     delegate: Item {
                         width: notificationsList.width
-                        height: appGroupColumn.height
+                        height: appGroupColumn.implicitHeight
                         
                         Column {
                             id: appGroupColumn
@@ -367,7 +404,7 @@ Scope {
                                 
                                 delegate: Rectangle {
                                     width: appGroupColumn.width - 20
-                                    height: notifCol.height + 16
+                                    height: notifCol.implicitHeight + 16
                                     anchors.horizontalCenter: parent.horizontalCenter
                                     radius: 6
                                     color: notifMouse.containsMouse ? 

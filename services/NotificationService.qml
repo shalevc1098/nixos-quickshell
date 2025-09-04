@@ -4,15 +4,20 @@ pragma ComponentBehavior: Bound
 import QtQuick
 import Quickshell
 import Quickshell.Services.Notifications
+import Quickshell.Io
+import qs.common
 
 Singleton {
     id: root
     
     property var notifications: []  // Current notifications (auto-hide)
     property var notificationHistory: []  // Persistent history for popup
-    property int defaultTimeout: 5000
-    property bool muted: false
-    property int maxHistorySize: 50  // Maximum number of notifications to keep in history
+    property int defaultTimeout: Config.notifications.defaultTimeout
+    property bool muted: Config.notifications.muteOnStartup
+    property int maxHistorySize: Config.notifications.maxHistory  // Maximum number of notifications to keep in history
+    
+    // File path for persistent storage
+    readonly property string historyFile: Config.paths.data + "/notification_history.json"
     
     signal notificationAdded(var notification)
     signal notificationRemoved(int id)
@@ -77,6 +82,9 @@ Singleton {
         
         notificationAdded(notificationData)
         
+        // Save history after adding new notification
+        saveHistory()
+        
         // Don't set tracked - this prevents the notification server from receiving updates
         // notification.tracked = true
     }
@@ -133,12 +141,93 @@ Singleton {
     // History management functions
     function clearHistory() {
         notificationHistory = []
+        saveHistory()
     }
     
     function removeFromHistory(index) {
         if (index >= 0 && index < notificationHistory.length) {
             const removed = notificationHistory[index]
             notificationHistory = notificationHistory.filter((n, i) => i !== index)
+            saveHistory()
+        }
+    }
+    
+    // Save notification history to file
+    function saveHistory() {
+        if (!Config.notifications.persistent) return
+        
+        try {
+            // Create directory if it doesn't exist
+            ensureDirectory.running = true
+            
+            // Prepare data for saving (limit fields to save space)
+            const dataToSave = notificationHistory.map(n => ({
+                title: n.title,
+                body: n.body,
+                appName: n.appName,
+                createdAt: n.createdAt,
+                urgency: n.urgency
+            }))
+            
+            const json = JSON.stringify(dataToSave, null, 2)
+            writeProcess.command = ["sh", "-c", `echo '${json.replace(/'/g, "'\\''")}' > "${historyFile}"`]
+            writeProcess.running = true
+        } catch (e) {
+            console.error("Failed to save notification history:", e)
+        }
+    }
+    
+    // Load notification history from file
+    function loadHistory() {
+        if (!Config.notifications.persistent) return
+        
+        readProcess.running = true
+    }
+    
+    // Process output handler for loading history
+    function processLoadedHistory(data) {
+        try {
+            const text = String(data).trim()
+            if (text && text !== "") {
+                const loaded = JSON.parse(text)
+                if (Array.isArray(loaded)) {
+                    // Convert loaded data back to notification format
+                    notificationHistory = loaded.map((n, index) => ({
+                        id: -1000 - index,  // Negative IDs for loaded notifications
+                        title: n.title || "",
+                        body: n.body || "",
+                        icon: "",  // Icons aren't saved
+                        appName: n.appName || "System",
+                        timeout: 0,  // Historical notifications don't timeout
+                        createdAt: n.createdAt || Date.now(),
+                        urgency: n.urgency || 0,
+                        isReplacement: false,
+                        actions: []  // Actions aren't saved
+                    })).slice(0, maxHistorySize)
+                }
+            }
+        } catch (e) {
+            console.error("Failed to load notification history:", e)
+        }
+    }
+    
+    // Process components for file I/O
+    Process {
+        id: ensureDirectory
+        command: ["mkdir", "-p", Config.paths.data]
+    }
+    
+    Process {
+        id: writeProcess
+        // Command set dynamically in saveHistory()
+    }
+    
+    Process {
+        id: readProcess
+        command: ["cat", historyFile]
+        
+        stdout: StdioCollector {
+            onDataChanged: processLoadedHistory(data)
         }
     }
     
@@ -175,5 +264,10 @@ Singleton {
             // Process the notification
             root.addNotification(notification)
         }
+    }
+    
+    Component.onCompleted: {
+        // Load history on startup
+        loadHistory()
     }
 }

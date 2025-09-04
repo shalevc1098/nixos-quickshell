@@ -210,7 +210,7 @@ Scope {
                                 // Summary (title)
                                 Text {
                                     width: parent.width - 28  // Account for close button
-                                    text: modelData.summary || ""
+                                    text: modelData.title || ""
                                     font.family: "SF Pro Display"
                                     font.pixelSize: 13
                                     font.weight: Font.Medium

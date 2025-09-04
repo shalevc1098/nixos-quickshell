@@ -217,7 +217,7 @@ Item {
                 
                 Text {
                   id: bellText
-                  text: NotificationService.muted ? "󰂛" : (NotificationService.notifications.length > 0 ? "󰂚" : "󰂜")  // Bell icon changes based on muted state and notifications
+                  text: NotificationService.muted ? "󰂛" : (NotificationService.notificationHistory.length > 0 ? "󰂚" : "󰂜")  // Bell icon changes based on muted state and history
                   font.family: "SF Pro Display, JetBrainsMono Nerd Font Propo"
                   font.pixelSize: 14
                   // Change color based on muted state and hover
@@ -232,7 +232,7 @@ Item {
                 
                 // Notification count badge
                 Rectangle {
-                  visible: NotificationService.notifications.length > 0
+                  visible: NotificationService.notificationHistory.length > 0
                   anchors.right: parent.right
                   anchors.top: parent.top
                   anchors.rightMargin: -4

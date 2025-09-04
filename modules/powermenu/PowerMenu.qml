@@ -11,7 +11,6 @@ Scope {
     property bool visible: false
     
     onVisibleChanged: {
-        console.log("PowerMenu visible changed to:", visible)
     }
     
     Variants {
@@ -47,7 +46,6 @@ Scope {
         Component.onCompleted: {
             // Force full screen after creation
             const scale = DisplayInfo.getScalingFactor(modelData.name, modelData.width, modelData.height)
-            console.log(`PowerMenu for ${modelData.name}: Logical ${modelData.width}x${modelData.height}, Scale ${scale.toFixed(2)}x`)
             
             // Try to force size if needed
             if (scale > 1.0) {
@@ -158,13 +156,10 @@ Scope {
     }
     
     function show() {
-        console.log("PowerMenu.show() called")
         visible = true
-        console.log("PowerMenu visible set to:", visible)
     }
     
     function hide() {
-        console.log("PowerMenu.hide() called")
         visible = false
     }
 }

@@ -23,7 +23,6 @@ Item {
     property bool sizeReady: monitor && monitor.width > 0 && monitor.height > 0 && monitor.scale > 0
     
     onMonitorChanged: {
-        console.log("Monitor changed:", monitor?.name, "Scale:", monitor?.scale, "Dimensions:", monitor?.width, "x", monitor?.height)
         if (sizeReady) {
             // Force size recalculation
             Qt.callLater(() => {
@@ -34,12 +33,10 @@ Item {
     }
     
     onMonitorDataChanged: {
-        // console.log("MonitorData changed:", monitorData?.name, "Transform:", monitorData?.transform, "Reserved:", monitorData?.reserved)
     }
     
     onSizeReadyChanged: {
         if (sizeReady) {
-            console.log("Size is now ready, forcing recalculation")
             // Force immediate recalculation
             root.implicitWidthChanged()
             root.implicitHeightChanged()
@@ -101,44 +98,7 @@ Item {
     width: sizeReady ? calculatedWidth : 252
     height: sizeReady ? calculatedHeight : 89
     
-    Component.onCompleted: {
-        console.log("=== OverviewWidget Initial Sizing Debug ===")
-        console.log("Monitor:", monitor?.name, "Scale:", monitor?.scale)
-        console.log("Monitor dimensions:", monitor?.width, "x", monitor?.height)
-        console.log("MonitorData transform:", monitorData?.transform)
-        console.log("Workspace implicit dimensions:", workspaceImplicitWidth, "x", workspaceImplicitHeight)
-        console.log("Calculated implicitWidth:", implicitWidth)
-        console.log("Calculated implicitHeight:", implicitHeight)
-        console.log("Actual width:", width, "height:", height)
-        console.log("==========================================")
-    }
     
-    onVisibleChanged: {
-        if (visible) {
-            console.log("=== OverviewWidget VISIBLE ===")
-            console.log("Monitor:", monitor?.name, "Scale:", monitor?.scale)
-            console.log("Size ready:", sizeReady)
-            console.log("Current size:", width, "x", height)
-            console.log("Calculated size:", calculatedWidth, "x", calculatedHeight)
-            console.log("==============================")
-        }
-    }
-    
-    onImplicitWidthChanged: {
-        console.log("ImplicitWidth changed to:", implicitWidth, "Actual width:", width)
-    }
-    
-    onImplicitHeightChanged: {
-        console.log("ImplicitHeight changed to:", implicitHeight, "Actual height:", height)
-    }
-    
-    onWidthChanged: {
-        console.log("Width changed to:", width, "ImplicitWidth:", implicitWidth)
-    }
-    
-    onHeightChanged: {
-        console.log("Height changed to:", height, "ImplicitHeight:", implicitHeight)
-    }
     
     // Elevation shadow placeholder (will implement StyledRectangularShadow later)
     Rectangle {
@@ -275,7 +235,6 @@ Item {
             Repeater {
                 model: {
                     if (!ToplevelManager.toplevels) {
-                        console.log("Window repeater: No ToplevelManager.toplevels")
                         return []
                     }
                     
@@ -672,6 +631,5 @@ Item {
     
     // Launch first search result (placeholder)
     function launchFirstResult() {
-        console.log("Launch first result for:", searchText)
     }
 }

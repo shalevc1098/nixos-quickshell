@@ -37,16 +37,6 @@ Scope {
             // Only show overview on the focused monitor
             visible: GlobalStates.overviewOpen && monitorIsFocused
             
-            onVisibleChanged: {
-                if (visible) {
-                    console.log("=== Overview OPENED on monitor:", modelData.name, "Size:", modelData.width, "x", modelData.height, "Scale:", modelData.scale)
-                    if (overviewLoader.item) {
-                        console.log("    OverviewWidget size:", overviewLoader.item.width, "x", overviewLoader.item.height)
-                    }
-                    console.log("    Monitor is focused:", monitorIsFocused)
-                    console.log("    Focused monitor is:", Hyprland.focusedMonitor?.name)
-                }
-            }
             
             // Layer configuration
             WlrLayershell.namespace: "quickshell:overview"
@@ -69,7 +59,6 @@ Scope {
             //     windows: [root]
             //     active: GlobalStates.overviewOpen && root.monitorIsFocused
             //     onCleared: {
-            //         console.log("FocusGrab cleared, active:", active, "overviewOpen:", GlobalStates.overviewOpen)
             //         if (!active) {
             //             GlobalStates.overviewOpen = false
             //         }
@@ -124,10 +113,6 @@ Scope {
                         panelWindow: root
                         searchText: root.searchText
                         visible: root.searchText === ""
-                        
-                        Component.onCompleted: {
-                            console.log("=== OverviewWidget in Overview panel created for monitor:", root.modelData.name)
-                        }
                     }
                 }
             }

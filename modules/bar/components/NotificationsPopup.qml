@@ -121,7 +121,33 @@ Scope {
                     clip: true
                     spacing: 8
                     
-                    model: NotificationService.notificationHistory
+                    property var expandedApps: ({})  // Track which app groups are expanded
+                    
+                    // Group notifications by app
+                    model: {
+                        const groups = {}
+                        for (let i = 0; i < NotificationService.notificationHistory.length; i++) {
+                            const notif = NotificationService.notificationHistory[i]
+                            const appName = notif.appName || "System"
+                            if (!groups[appName]) {
+                                groups[appName] = []
+                            }
+                            const notifCopy = Object.assign({}, notif)
+                            notifCopy.originalIndex = i
+                            groups[appName].push(notifCopy)
+                        }
+                        
+                        // Convert to array format for ListView
+                        const result = []
+                        for (const [appName, notifications] of Object.entries(groups)) {
+                            result.push({
+                                appName: appName,
+                                notifications: notifications,
+                                count: notifications.length
+                            })
+                        }
+                        return result
+                    }
                     
                     // Empty state
                     Text {
@@ -136,59 +162,157 @@ Scope {
                     
                     delegate: Item {
                         width: notificationsList.width
-                        height: notificationContent.height + 16
+                        height: appGroupColumn.height
                         
-                        Rectangle {
-                            anchors.fill: parent
-                            anchors.margins: 2
-                            radius: 8
-                            color: notificationMouseArea.containsMouse ? 
-                                   Appearance.m3colors.surface_container_highest : 
-                                   Appearance.m3colors.surface_container
+                        Column {
+                            id: appGroupColumn
+                            width: parent.width
+                            spacing: 4
                             
-                            MouseArea {
-                                id: notificationMouseArea
-                                anchors.fill: parent
-                                hoverEnabled: true
-                                cursorShape: Qt.PointingHandCursor
+                            // App group header
+                            Rectangle {
+                                width: parent.width
+                                height: modelData.count === 1 || !notificationsList.expandedApps[modelData.appName] ? 60 : 40
+                                radius: 8
+                                color: groupHeaderMouse.containsMouse ? 
+                                       Appearance.m3colors.surface_container_highest : 
+                                       Appearance.m3colors.surface_container
                                 
-                                onClicked: {
-                                    // Could add action handling here if notifications have actions
+                                property real dragX: 0
+                                property bool dismissing: false
+                                
+                                transform: Translate {
+                                    x: dismissing ? parent.width : dragX
+                                    Behavior on x {
+                                        NumberAnimation {
+                                            duration: dismissing ? 200 : 0
+                                            easing.type: Easing.OutCubic
+                                            onRunningChanged: {
+                                                if (!running && dismissing) {
+                                                    NotificationService.clearHistoryByApp(modelData.appName)
+                                                }
+                                            }
+                                        }
+                                    }
                                 }
-                            }
-                            
-                            Column {
-                                id: notificationContent
-                                anchors.left: parent.left
-                                anchors.right: parent.right
-                                anchors.verticalCenter: parent.verticalCenter
-                                anchors.margins: 12
-                                spacing: 4
                                 
-                                // App name and time (account for close button width)
+                                opacity: 1 - Math.abs(dragX) / parent.width
+                                
+                                MouseArea {
+                                    id: groupHeaderMouse
+                                    anchors.fill: parent
+                                    hoverEnabled: true
+                                    cursorShape: modelData.count > 1 ? Qt.PointingHandCursor : Qt.ArrowCursor
+                                    
+                                    property real startX: 0
+                                    property bool isDragging: false
+                                    
+                                    onPressed: {
+                                        startX = mouseX
+                                        isDragging = false
+                                    }
+                                    
+                                    onPositionChanged: {
+                                        if (pressed) {
+                                            const delta = mouseX - startX
+                                            if (Math.abs(delta) > 5) {
+                                                isDragging = true
+                                                parent.dragX = delta
+                                            }
+                                        }
+                                    }
+                                    
+                                    onReleased: {
+                                        if (isDragging) {
+                                            if (Math.abs(parent.dragX) > 80) {
+                                                parent.dismissing = true
+                                            } else {
+                                                parent.dragX = 0
+                                            }
+                                        } else if (!isDragging && modelData.count > 1) {
+                                            const expanded = notificationsList.expandedApps
+                                            expanded[modelData.appName] = !expanded[modelData.appName]
+                                            notificationsList.expandedApps = expanded
+                                        }
+                                    }
+                                }
+                                
                                 Row {
-                                    width: parent.width - 28  // Leave space for close button
+                                    id: headerRow
+                                    anchors.left: parent.left
+                                    anchors.right: parent.right
+                                    anchors.top: parent.top
+                                    anchors.topMargin: 12
+                                    anchors.leftMargin: 12
+                                    anchors.rightMargin: 12
                                     spacing: 8
                                     
+                                    // Expand/collapse arrow (only if multiple notifications)
                                     Text {
-                                        text: modelData.appName || "System"
+                                        visible: modelData.count > 1
+                                        text: notificationsList.expandedApps[modelData.appName] ? "󰅃" : "󰅀"
+                                        font.family: "JetBrainsMono Nerd Font Propo"
+                                        font.pixelSize: 12
+                                        color: Appearance.m3colors.on_surface_variant
+                                        anchors.verticalCenter: parent.verticalCenter
+                                    }
+                                    
+                                    // App icon
+                                    Image {
+                                        width: 16
+                                        height: 16
+                                        source: {
+                                            const firstNotif = modelData.notifications[0]
+                                            if (firstNotif.icon) {
+                                                return firstNotif.icon.startsWith("/") || firstNotif.icon.startsWith("file://") ? 
+                                                       firstNotif.icon : 
+                                                       CustomIconLoader.getIconSource(firstNotif.icon)
+                                            }
+                                            return ""
+                                        }
+                                        visible: source !== ""
+                                        anchors.verticalCenter: parent.verticalCenter
+                                        fillMode: Image.PreserveAspectFit
+                                        smooth: true
+                                    }
+                                    
+                                    // App name
+                                    Text {
+                                        text: modelData.appName
                                         font.family: "SF Pro Display"
-                                        font.pixelSize: 11
+                                        font.pixelSize: 13
                                         font.weight: Font.Medium
                                         color: Appearance.m3colors.primary
+                                        anchors.verticalCenter: parent.verticalCenter
                                     }
                                     
-                                    Item { 
-                                        width: parent.width - parent.children[0].width - timeText.width - 16
-                                        height: 1 
+                                    // Notification count badge
+                                    Rectangle {
+                                        visible: modelData.count > 1
+                                        width: countText.width + 12
+                                        height: 20
+                                        radius: 10
+                                        color: Appearance.m3colors.primary_container
+                                        anchors.verticalCenter: parent.verticalCenter
+                                        
+                                        Text {
+                                            id: countText
+                                            anchors.centerIn: parent
+                                            text: modelData.count
+                                            font.family: "SF Pro Display"
+                                            font.pixelSize: 11
+                                            font.weight: Font.Medium
+                                            color: Appearance.m3colors.on_primary_container
+                                        }
                                     }
                                     
+                                    
+                                    // Most recent time
                                     Text {
-                                        id: timeText
                                         text: {
-                                            // Format time ago
+                                            const mostRecent = modelData.notifications[0]
                                             const now = Date.now()
-                                            const notifTime = modelData.createdAt || modelData.timestamp || now
+                                            const notifTime = mostRecent.createdAt || mostRecent.timestamp || now
                                             const diff = now - notifTime
                                             const seconds = Math.floor(diff / 1000)
                                             const minutes = Math.floor(seconds / 60)
@@ -204,56 +328,180 @@ Scope {
                                         font.pixelSize: 11
                                         color: Appearance.m3colors.on_surface_variant
                                         opacity: 0.7
+                                        anchors.verticalCenter: parent.verticalCenter
                                     }
                                 }
                                 
-                                // Summary (title)
+                                // Show first notification preview if collapsed
                                 Text {
-                                    width: parent.width - 28  // Account for close button
-                                    text: modelData.title || ""
-                                    font.family: "SF Pro Display"
-                                    font.pixelSize: 13
-                                    font.weight: Font.Medium
-                                    color: Appearance.m3colors.on_surface
-                                    wrapMode: Text.Wrap
-                                }
-                                
-                                // Body (description)
-                                Text {
-                                    width: parent.width - 28  // Account for close button
-                                    text: modelData.body || ""
+                                    visible: modelData.count === 1 || !notificationsList.expandedApps[modelData.appName]
+                                    anchors.left: parent.left
+                                    anchors.right: parent.right
+                                    anchors.top: parent.children[1].bottom
+                                    anchors.topMargin: 4
+                                    anchors.leftMargin: modelData.count > 1 ? 32 : 12
+                                    anchors.rightMargin: 12
+                                    text: {
+                                        const firstNotif = modelData.notifications[0]
+                                        const title = firstNotif.title || ""
+                                        const body = firstNotif.body || ""
+                                        return title + (body ? " • " + body : "")
+                                    }
                                     font.family: "SF Pro Display"
                                     font.pixelSize: 12
                                     color: Appearance.m3colors.on_surface_variant
-                                    wrapMode: Text.Wrap
-                                    visible: text.length > 0
-                                    maximumLineCount: 3
+                                    maximumLineCount: 1
                                     elide: Text.ElideRight
                                 }
                             }
                             
-                            // Close button for individual notification
-                            MouseArea {
-                                width: 20
-                                height: 20
-                                anchors.top: parent.top
-                                anchors.right: parent.right
-                                anchors.margins: 8
-                                cursorShape: Qt.PointingHandCursor
+                            // Expanded notifications
+                            Repeater {
+                                model: notificationsList.expandedApps[modelData.appName] && modelData.count > 1 ? 
+                                       modelData.notifications : []
                                 
-                                onClicked: {
-                                    NotificationService.removeFromHistory(index)
-                                }
-                                
-                                Text {
-                                    anchors.centerIn: parent
-                                    text: "󰅖"  // Close icon
-                                    font.family: "JetBrainsMono Nerd Font Propo"
-                                    font.pixelSize: 14
-                                    color: parent.containsMouse ? 
-                                           Appearance.m3colors.error : 
-                                           Appearance.m3colors.on_surface_variant
-                                    opacity: parent.containsMouse ? 1.0 : 0.5
+                                delegate: Rectangle {
+                                    width: appGroupColumn.width - 20
+                                    height: notifCol.height + 16
+                                    anchors.horizontalCenter: parent.horizontalCenter
+                                    radius: 6
+                                    color: notifMouse.containsMouse ? 
+                                           Appearance.m3colors.surface_container_highest : 
+                                           Appearance.m3colors.surface_container_high
+                                    
+                                    property real dragX: 0
+                                    property bool dismissing: false
+                                    
+                                    transform: Translate {
+                                        x: dismissing ? parent.width : dragX
+                                        Behavior on x {
+                                            NumberAnimation {
+                                                duration: dismissing ? 200 : 0
+                                                easing.type: Easing.OutCubic
+                                                onRunningChanged: {
+                                                    if (!running && dismissing) {
+                                                        NotificationService.removeFromHistory(modelData.originalIndex)
+                                                    }
+                                                }
+                                            }
+                                        }
+                                    }
+                                    
+                                    opacity: 1 - Math.abs(dragX) / parent.width
+                                    
+                                    MouseArea {
+                                        id: notifMouse
+                                        anchors.fill: parent
+                                        hoverEnabled: true
+                                        
+                                        property real startX: 0
+                                        property bool isDragging: false
+                                        
+                                        onPressed: {
+                                            startX = mouseX
+                                            isDragging = false
+                                        }
+                                        
+                                        onPositionChanged: {
+                                            if (pressed) {
+                                                const delta = mouseX - startX
+                                                if (Math.abs(delta) > 5) {
+                                                    isDragging = true
+                                                    parent.dragX = delta
+                                                }
+                                            }
+                                        }
+                                        
+                                        onReleased: {
+                                            if (isDragging) {
+                                                if (Math.abs(parent.dragX) > 80) {
+                                                    parent.dismissing = true
+                                                } else {
+                                                    parent.dragX = 0
+                                                }
+                                            }
+                                        }
+                                    }
+                                    
+                                    Row {
+                                        anchors.left: parent.left
+                                        anchors.right: parent.right
+                                        anchors.verticalCenter: parent.verticalCenter
+                                        anchors.margins: 10
+                                        spacing: 8
+                                        
+                                        // Notification icon
+                                        Image {
+                                            width: 20
+                                            height: 20
+                                            source: {
+                                                if (modelData.icon) {
+                                                    return modelData.icon.startsWith("/") || modelData.icon.startsWith("file://") ? 
+                                                           modelData.icon : 
+                                                           CustomIconLoader.getIconSource(modelData.icon)
+                                                }
+                                                return ""
+                                            }
+                                            visible: source !== ""
+                                            anchors.verticalCenter: parent.verticalCenter
+                                            fillMode: Image.PreserveAspectFit
+                                            smooth: true
+                                        }
+                                        
+                                        Column {
+                                            id: notifCol
+                                            width: parent.width - (parent.children[0].visible ? parent.children[0].width + parent.spacing : 0) - 24
+                                            anchors.verticalCenter: parent.verticalCenter
+                                            spacing: 2
+                                            
+                                            Text {
+                                                width: parent.width
+                                                text: modelData.title || ""
+                                                font.family: "SF Pro Display"
+                                                font.pixelSize: 12
+                                                font.weight: Font.Medium
+                                                color: Appearance.m3colors.on_surface
+                                                wrapMode: Text.Wrap
+                                            }
+                                        
+                                            Text {
+                                                width: parent.width
+                                                text: modelData.body || ""
+                                                font.family: "SF Pro Display"
+                                                font.pixelSize: 11
+                                                color: Appearance.m3colors.on_surface_variant
+                                                wrapMode: Text.Wrap
+                                                visible: text.length > 0
+                                                maximumLineCount: 2
+                                                elide: Text.ElideRight
+                                            }
+                                        }
+                                    }
+                                    
+                                    // Close button for individual notification
+                                    MouseArea {
+                                        width: 18
+                                        height: 18
+                                        anchors.top: parent.top
+                                        anchors.right: parent.right
+                                        anchors.margins: 6
+                                        cursorShape: Qt.PointingHandCursor
+                                        
+                                        onClicked: {
+                                            NotificationService.removeFromHistory(modelData.originalIndex)
+                                        }
+                                        
+                                        Text {
+                                            anchors.centerIn: parent
+                                            text: "󰅖"
+                                            font.family: "JetBrainsMono Nerd Font Propo"
+                                            font.pixelSize: 12
+                                            color: parent.containsMouse ? 
+                                                   Appearance.m3colors.error : 
+                                                   Appearance.m3colors.on_surface_variant
+                                            opacity: parent.containsMouse ? 1.0 : 0.5
+                                        }
+                                    }
                                 }
                             }
                         }

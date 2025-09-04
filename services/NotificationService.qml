@@ -144,6 +144,11 @@ Singleton {
         saveHistory()
     }
     
+    function clearHistoryByApp(appName) {
+        notificationHistory = notificationHistory.filter(n => n.appName !== appName)
+        saveHistory()
+    }
+    
     function removeFromHistory(index) {
         if (index >= 0 && index < notificationHistory.length) {
             const removed = notificationHistory[index]
@@ -165,6 +170,7 @@ Singleton {
                 title: n.title,
                 body: n.body,
                 appName: n.appName,
+                icon: n.icon,  // Save icon path
                 createdAt: n.createdAt,
                 urgency: n.urgency
             }))
@@ -196,7 +202,7 @@ Singleton {
                         id: -1000 - index,  // Negative IDs for loaded notifications
                         title: n.title || "",
                         body: n.body || "",
-                        icon: "",  // Icons aren't saved
+                        icon: n.icon || "",  // Load saved icon
                         appName: n.appName || "System",
                         timeout: 0,  // Historical notifications don't timeout
                         createdAt: n.createdAt || Date.now(),

@@ -318,7 +318,6 @@ Rectangle {
                                 }
                                 
                                 onClicked: {
-                                    console.log("Action button clicked")
                                     
                                     // Call the service to invoke the action
                                     if (actionButton.modelData && actionButton.modelData.identifier) {

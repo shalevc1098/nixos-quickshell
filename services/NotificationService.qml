@@ -17,13 +17,10 @@ Singleton {
     signal notificationAdded(var notification)
     signal notificationRemoved(int id)
     
-    Component.onCompleted: {
-        console.log("NotificationService initialized")
-    }
+    
     
     function toggleMute() {
         muted = !muted
-        console.log(`Notifications ${muted ? 'muted' : 'unmuted'}`)
     }
     
     function addNotification(notification) {
@@ -65,7 +62,6 @@ Singleton {
         if (existingIndex !== -1) {
             // Remove the old notification first
             notifications = notifications.filter(n => n.id !== notification.id)
-            console.log(`Replacing notification: "${notificationData.title}"`)
         }
         
         // Add to current notifications (for auto-hide)
@@ -79,7 +75,6 @@ Singleton {
             notificationHistory = notificationHistory.slice(0, maxHistorySize)
         }
         
-        console.log(`Notification added: "${notificationData.title}" - Current: ${notifications.length}, History: ${notificationHistory.length}`)
         notificationAdded(notificationData)
         
         // Don't set tracked - this prevents the notification server from receiving updates
@@ -98,9 +93,7 @@ Singleton {
                 if (action && action.identifier === actionIdentifier) {
                     try {
                         action.invoke()
-                        console.log(`Action "${actionIdentifier}" invoked for notification ${notificationId}`)
                     } catch (e) {
-                        console.log("Error invoking action:", e)
                     }
                     break
                 }
@@ -112,7 +105,6 @@ Singleton {
         const index = notifications.findIndex(n => n.id === id)
         if (index !== -1) {
             notifications = notifications.filter(n => n.id !== id)
-            console.log(`Notification removed: ${id} - Total: ${notifications.length}`)
             
             // Also untrack from server to prevent persistence
             const trackedNotif = server.trackedNotifications.values.find(n => n.id === id)
@@ -141,14 +133,12 @@ Singleton {
     // History management functions
     function clearHistory() {
         notificationHistory = []
-        console.log("Notification history cleared")
     }
     
     function removeFromHistory(index) {
         if (index >= 0 && index < notificationHistory.length) {
             const removed = notificationHistory[index]
             notificationHistory = notificationHistory.filter((n, i) => i !== index)
-            console.log(`Removed from history: "${removed.title}" - History size: ${notificationHistory.length}`)
         }
     }
     
@@ -169,11 +159,9 @@ Singleton {
         keepOnReload: false
         
         onNotification: (notification) => {
-            console.log(`NotificationServer received: app="${notification.appName}" title="${notification.summary}" id=${notification.id} tracked=${notification.tracked}`)
             
             // Skip processing if notifications are muted
             if (root.muted) {
-                console.log("Notification ignored (muted)")
                 return
             }
             

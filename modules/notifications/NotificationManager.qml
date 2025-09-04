@@ -71,7 +71,6 @@ Variants {
             target: NotificationService
             
             function onNotificationAdded(notification) {
-                console.log("Creating bubble for notification:", notification.title)
                 
                 // Remove oldest notifications if we're at the limit
                 while (bubbles.length >= maxNotifications) {
@@ -91,7 +90,6 @@ Variants {
                 })
                 
                 if (bubble) {
-                    console.log("Bubble created successfully")
                     // Make bubble visible immediately
                     bubble.visible = true
                     
@@ -117,7 +115,6 @@ Variants {
                         }
                     })
                 } else {
-                    console.error("Failed to create bubble")
                 }
             }
         }

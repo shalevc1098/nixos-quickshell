@@ -264,7 +264,6 @@ Item {
               }
             }
             onClicked: function() {
-              console.log("Power button clicked, emitting powerMenuRequested signal")
               root.powerMenuRequested()
             }
           }

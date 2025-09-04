@@ -54,11 +54,9 @@ Item {
             return false
         }
         
-        console.log("showCustomMenu called for trayItem:", trayItem.id, "hasMenu:", trayItem.hasMenu)
         
         try {
             if (!menuOpener || !menuOpener.children) {
-                console.log("No menuOpener or children")
                 return false
             }
             
@@ -80,7 +78,6 @@ Item {
             
             return true
         } catch (e) {
-            console.log("Error showing custom menu:", e)
             return false
         }
     }
@@ -167,15 +164,11 @@ Item {
                     acceptedButtons: Qt.LeftButton | Qt.RightButton | Qt.MiddleButton
                     
                     onClicked: (mouse) => {
-                        console.log("Tray item clicked:", mouse.button, "modelData.id:", modelData.id)
-                        console.log("  menuOpener.children:", menuOpener.children)
-                        console.log("  menuOpener.children.count:", menuOpener.children ? menuOpener.children.count : 0)
                         
                         if (mouse.button === Qt.LeftButton) {
                             // Left click - activate the item
                             if (modelData.onlyMenu && modelData.hasMenu) {
                                 // If only menu, try custom menu first, fallback to default
-                                console.log("Left click on menu-only item, showing custom menu")
                                 if (!showCustomMenu(modelData, mouseArea, menuOpener, menuAnchor)) {
                                     menuAnchor.updatePosition()
                                     if (menuAnchor.anchor.window) {
@@ -184,14 +177,11 @@ Item {
                                 }
                             } else {
                                 // Otherwise, activate the item
-                                console.log("Left click activation")
                                 modelData.activate()
                             }
                         } else if (mouse.button === Qt.RightButton) {
                             // Right click - ALWAYS show our custom menu first
-                            console.log("Right click - showing custom menu")
                             if (!showCustomMenu(modelData, mouseArea, menuOpener, menuAnchor)) {
-                                console.log("Custom menu failed, trying default")
                                 // Only fallback to default if the app actually has a menu
                                 if (modelData.hasMenu) {
                                     menuAnchor.updatePosition()

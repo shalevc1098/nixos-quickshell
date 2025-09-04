@@ -26,15 +26,12 @@ PanelWindow {
     }
     color: "transparent"
     
-    Component.onCompleted: {
-        console.log("SystemTrayMenu created as PanelWindow")
-    }
+    
     
     // Fullscreen MouseArea to catch clicks outside
     MouseArea {
         anchors.fill: parent
         onClicked: {
-            console.log("Click outside menu, closing")
             root.visible = false
         }
     }
@@ -113,7 +110,6 @@ PanelWindow {
                 model: root.menuOpener ? root.menuOpener.children : []
                 
                 onItemAdded: (index, item) => {
-                    console.log("Menu item added at index:", index)
                 }
                 
                 delegate: Loader {
@@ -132,7 +128,6 @@ PanelWindow {
                             // Access the values array to check previous item
                             let prevItem = root.menuOpener.children.values[index - 1]
                             if (prevItem && prevItem.isSeparator) {
-                                console.log("Skipping consecutive separator at index", index)
                                 return false
                             }
                         }
@@ -240,13 +235,10 @@ PanelWindow {
                         cursorShape: modelData.enabled ? Qt.PointingHandCursor : Qt.ArrowCursor
                         
                         onClicked: {
-                            console.log("Menu item clicked:", modelData.text)
                             if (modelData.enabled) {
-                                console.log("Triggering DBusMenuItem for:", modelData.text)
                                 try {
                                     modelData.triggered()
                                 } catch (e) {
-                                    console.log("Error triggering:", e)
                                 }
                             }
                             root.visible = false

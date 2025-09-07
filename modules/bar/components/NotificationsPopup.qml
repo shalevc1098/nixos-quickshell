@@ -469,30 +469,37 @@ Scope {
                                         anchors.left: parent.left
                                         anchors.right: parent.right
                                         anchors.verticalCenter: parent.verticalCenter
-                                        anchors.margins: 10
-                                        spacing: 8
+                                        anchors.leftMargin: 6
+                                        anchors.rightMargin: 10
+                                        anchors.topMargin: 10
+                                        anchors.bottomMargin: 10
+                                        spacing: 6
                                         
-                                        // Notification icon
-                                        Image {
+                                        // Notification icon (always reserve space for alignment)
+                                        Item {
                                             width: 20
                                             height: 20
-                                            source: {
-                                                if (modelData.icon) {
-                                                    return modelData.icon.startsWith("/") || modelData.icon.startsWith("file://") ? 
-                                                           modelData.icon : 
-                                                           CustomIconLoader.getIconSource(modelData.icon)
-                                                }
-                                                return ""
-                                            }
-                                            visible: source !== ""
                                             anchors.verticalCenter: parent.verticalCenter
-                                            fillMode: Image.PreserveAspectFit
-                                            smooth: true
+                                            
+                                            Image {
+                                                anchors.fill: parent
+                                                source: {
+                                                    if (modelData.icon) {
+                                                        return modelData.icon.startsWith("/") || modelData.icon.startsWith("file://") ? 
+                                                               modelData.icon : 
+                                                               CustomIconLoader.getIconSource(modelData.icon)
+                                                    }
+                                                    return ""
+                                                }
+                                                visible: source !== ""
+                                                fillMode: Image.PreserveAspectFit
+                                                smooth: true
+                                            }
                                         }
                                         
                                         Column {
                                             id: notifCol
-                                            width: parent.width - (parent.children[0].visible ? parent.children[0].width + parent.spacing : 0) - 24
+                                            width: parent.width - parent.children[0].width - parent.spacing - 18
                                             anchors.verticalCenter: parent.verticalCenter
                                             spacing: 2
                                             
